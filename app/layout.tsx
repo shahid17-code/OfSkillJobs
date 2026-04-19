@@ -16,9 +16,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body style={{ margin: 0, background: "#f8fafc", fontFamily: "Inter, system-ui, sans-serif" }}>
         <Navbar />
-        <main style={{ minHeight: "80vh" }}>{children}</main>
+        <main style={{ minHeight: "80vh", padding: "20px" }}>{children}</main>
         <footer
           style={{
             textAlign: "center",

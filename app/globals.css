@@ -99,3 +99,69 @@ footer {
   padding: 25px;
   margin-top: 40px;
 }
+
+/* ========== MOBILE RESPONSIVE ========== */
+@media (max-width: 768px) {
+  /* Make all grids stack */
+  [style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Hero text adjustments */
+  h1, [style*="fontSize: 48px"], [style*="fontSize: 38px"] {
+    font-size: 2rem !important;
+  }
+
+  /* Stats bar vertical */
+  [style*="statsBar"], [style*="display: flex"][style*="justifyContent: space-between"] {
+    flex-direction: column !important;
+    text-align: center;
+    gap: 1rem !important;
+  }
+
+  /* Cards full width */
+  [style*="borderRadius: 20px"][style*="padding: 20px"],
+  [style*="borderRadius: 24px"][style*="padding: 32px"] {
+    width: 100% !important;
+    margin: 0 0 1rem 0 !important;
+  }
+
+  /* Buttons full width */
+  button, [style*="padding: 12px 24px"] {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Two column layout becomes one */
+  [style*="gridTemplateColumns: 1.6fr 0.9fr"],
+  [style*="gridTemplateColumns: 2fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Sidebar goes below main content */
+  aside, [style*="sideColumn"] {
+    order: 2;
+  }
+
+  /* Form inputs full width */
+  input, select, textarea {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Filter bars stack */
+  .filter-bar, [style*="filterBar"] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-bar input, .filter-bar select, .filter-bar button {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Padding for bottom tab bar */
+  body {
+    padding-bottom: 70px;
+  }
+}

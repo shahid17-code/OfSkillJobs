@@ -91,6 +91,12 @@ export default function Navbar() {
         <div style={styles.desktopMenu}>
           <button style={isActive("/") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/")}>Home</button>
           <button style={isActive("/jobs") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/jobs")}>Jobs</button>
+          <button
+            style={isActive(`/applications/${user?.id}`) ? styles.activeBtn : styles.navBtn}
+            onClick={() => user?.id && router.push(`/applications/${user.id}`)}
+          >
+            Applications
+          </button>
           <button style={isActive("/challenges") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/challenges")}>Challenges</button>
           <button style={isActive("/leaderboard") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/leaderboard")}>Leaderboard</button>
           <button style={isActive("/profile") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/profile")}>Profile</button>
@@ -102,6 +108,18 @@ export default function Navbar() {
       return (
         <div style={styles.desktopMenu}>
           <button style={isActive("/") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/")}>Home</button>
+          <button
+            style={isActive(`/company/${companyUsername || ""}`) ? styles.activeBtn : styles.navBtn}
+            onClick={() => {
+              if (companyUsername) {
+                router.push(`/company/${companyUsername}`);
+              } else {
+                router.push("/company/profile/edit");
+              }
+            }}
+          >
+            Profile
+          </button>
           <button style={isActive("/company/dashboard") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/company/dashboard")}>Dashboard</button>
           <button style={styles.highlightedBtn} onClick={() => router.push("/company/jobs/new")}>Post Job</button>
           <button style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
@@ -111,15 +129,43 @@ export default function Navbar() {
     return null;
   };
 
-  // Mobile menu items (full list)
+  // Bottom tab bar items (mobile only)
+  const bottomTabItems = () => {
+    if (loading) return null;
+    if (!user) {
+      return [
+        { label: "Home", icon: "🏠", path: "/" },
+        { label: "Jobs", icon: "💼", path: "/jobs" },
+        { label: "Challenges", icon: "🏆", path: "/challenges" },
+      ];
+    }
+    if (role === "developer") {
+      return [
+        { label: "Home", icon: "🏠", path: "/" },
+        { label: "Jobs", icon: "💼", path: "/jobs" },
+        { label: "Challenges", icon: "🏆", path: "/challenges" },
+        { label: "Profile", icon: "👤", path: "/profile" },
+      ];
+    }
+    if (role === "company") {
+      return [
+        { label: "Home", icon: "🏠", path: "/" },
+        { label: "Dashboard", icon: "📊", path: "/company/dashboard" },
+        { label: "Post Job", icon: "➕", path: "/company/jobs/new" },
+      ];
+    }
+    return [];
+  };
+
+  // Hamburger menu items (full list) - updated as requested
   const hamburgerItems = () => {
     if (loading) return <span>Loading...</span>;
     if (!user) {
       return (
         <>
           <button onClick={() => { closeMenu(); router.push("/"); }} style={styles.mobileBtn}>Home</button>
-          <button onClick={() => { closeMenu(); router.push("/challenges"); }} style={styles.mobileBtn}>Challenges</button>
           <button onClick={() => { closeMenu(); router.push("/jobs"); }} style={styles.mobileBtn}>Jobs</button>
+          <button onClick={() => { closeMenu(); router.push("/challenges"); }} style={styles.mobileBtn}>Challenges</button>
           <button onClick={() => { closeMenu(); router.push("/signup"); }} style={styles.mobileBtn}>Signup</button>
           <button onClick={() => { closeMenu(); router.push("/login"); }} style={styles.mobileBtn}>Login</button>
         </>
@@ -130,10 +176,10 @@ export default function Navbar() {
         <>
           <button onClick={() => { closeMenu(); router.push("/"); }} style={styles.mobileBtn}>Home</button>
           <button onClick={() => { closeMenu(); router.push("/jobs"); }} style={styles.mobileBtn}>Jobs</button>
-          <button onClick={() => { closeMenu(); router.push(`/applications/${user.id}`); }} style={styles.mobileBtn}>Applications</button>
+          <button onClick={() => { closeMenu(); router.push(`/applications/${user.id}`); }} style={styles.mobileBtn}>Track Applications</button>
           <button onClick={() => { closeMenu(); router.push("/challenges"); }} style={styles.mobileBtn}>Challenges</button>
           <button onClick={() => { closeMenu(); router.push("/leaderboard"); }} style={styles.mobileBtn}>Leaderboard</button>
-          <button onClick={() => { closeMenu(); router.push("/profile"); }} style={styles.mobileBtn}>Profile</button>
+          <button onClick={() => { closeMenu(); router.push("/profile"); }} style={styles.mobileBtn}>My Profile</button>
           <button onClick={handleLogout} style={styles.mobileLogoutBtn}>Logout</button>
         </>
       );
@@ -144,13 +190,27 @@ export default function Navbar() {
           <button onClick={() => { closeMenu(); router.push("/"); }} style={styles.mobileBtn}>Home</button>
           <button onClick={() => { closeMenu(); router.push("/company/dashboard"); }} style={styles.mobileBtn}>Dashboard</button>
           <button onClick={() => { closeMenu(); router.push("/company/jobs/new"); }} style={styles.mobileBtn}>Post Job</button>
-          <button onClick={() => { closeMenu(); router.push("/company/profile/edit"); }} style={styles.mobileBtn}>Edit Profile</button>
+          <button
+            onClick={() => {
+              closeMenu();
+              if (companyUsername) {
+                router.push(`/company/${companyUsername}`);
+              } else {
+                router.push("/company/profile/edit");
+              }
+            }}
+            style={styles.mobileBtn}
+          >
+            My Profile
+          </button>
           <button onClick={handleLogout} style={styles.mobileLogoutBtn}>Logout</button>
         </>
       );
     }
     return null;
   };
+
+  const bottomItems = bottomTabItems();
 
   return (
     <nav style={styles.navbar}>
@@ -171,6 +231,25 @@ export default function Navbar() {
       <div style={{ ...styles.mobileMenu, display: mobileMenuOpen ? "flex" : "none" }}>
         {hamburgerItems()}
       </div>
+
+      {/* Bottom tab bar - only visible on mobile */}
+      {bottomItems && bottomItems.length > 0 && (
+        <div style={styles.bottomTabBar}>
+          {bottomItems.map((item) => (
+            <button
+              key={item.path}
+              style={{
+                ...styles.bottomTabBtn,
+                ...(pathname === item.path ? styles.bottomTabActive : {}),
+              }}
+              onClick={() => router.push(item.path)}
+            >
+              <span style={styles.tabIcon}>{item.icon}</span>
+              <span style={styles.tabLabel}>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </nav>
   );
 }
@@ -303,20 +382,59 @@ const styles = {
     fontSize: "16px",
     marginTop: "8px",
   },
+  bottomTabBar: {
+    display: "none",
+    position: "fixed",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    background: "#0f172a",
+    borderTop: "1px solid #334155",
+    justifyContent: "space-around",
+    padding: "8px 0",
+    zIndex: 1000,
+  },
+  bottomTabBtn: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    background: "transparent",
+    border: "none",
+    color: "#cbd5e1",
+    cursor: "pointer",
+    padding: "6px 12px",
+    borderRadius: "8px",
+    transition: "all 0.2s",
+    fontSize: "12px",
+  },
+  bottomTabActive: {
+    color: "#3b82f6",
+  },
+  tabIcon: {
+    fontSize: "22px",
+    marginBottom: "2px",
+  },
+  tabLabel: {
+    fontSize: "10px",
+    fontWeight: "500",
+  },
 };
 
-// Media query for mobile: hide desktop menu, show hamburger
+// Media query for mobile
 if (typeof window !== "undefined") {
   const mediaQuery = window.matchMedia("(max-width: 768px)");
   const handleResize = (e) => {
     const desktopWrapper = document.querySelector(".desktop-wrapper");
     const hamburger = document.querySelector(".hamburger");
+    const bottomBar = document.querySelector(".bottom-tab-bar");
     if (e.matches) {
       if (desktopWrapper) desktopWrapper.style.display = "none";
       if (hamburger) hamburger.style.display = "flex";
+      if (bottomBar) bottomBar.style.display = "flex";
     } else {
       if (desktopWrapper) desktopWrapper.style.display = "flex";
       if (hamburger) hamburger.style.display = "none";
+      if (bottomBar) bottomBar.style.display = "none";
     }
   };
   mediaQuery.addEventListener("change", handleResize);
