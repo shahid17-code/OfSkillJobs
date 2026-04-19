@@ -77,52 +77,49 @@ export default function Navbar() {
     if (loading) return null;
     if (!user) {
       return (
-        <div style={styles.desktopMenu}>
-          <button style={isActive("/") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/")}>Home</button>
-          <button style={isActive("/challenges") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/challenges")}>Challenges</button>
-          <button style={isActive("/jobs") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/jobs")}>Jobs</button>
-          <button style={styles.primaryBtn} onClick={() => router.push("/signup")}>Signup</button>
-          <button style={styles.secondaryBtn} onClick={() => router.push("/login")}>Login</button>
+        <div className="desktop-menu">
+          <button className={isActive("/") ? "active-btn" : "nav-btn"} onClick={() => router.push("/")}>Home</button>
+          <button className={isActive("/challenges") ? "active-btn" : "nav-btn"} onClick={() => router.push("/challenges")}>Challenges</button>
+          <button className={isActive("/jobs") ? "active-btn" : "nav-btn"} onClick={() => router.push("/jobs")}>Jobs</button>
+          <button className="primary-btn" onClick={() => router.push("/signup")}>Signup</button>
+          <button className="secondary-btn" onClick={() => router.push("/login")}>Login</button>
         </div>
       );
     }
     if (role === "developer") {
       return (
-        <div style={styles.desktopMenu}>
-          <button style={isActive("/") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/")}>Home</button>
-          <button style={isActive("/jobs") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/jobs")}>Jobs</button>
+        <div className="desktop-menu">
+          <button className={isActive("/") ? "active-btn" : "nav-btn"} onClick={() => router.push("/")}>Home</button>
+          <button className={isActive("/jobs") ? "active-btn" : "nav-btn"} onClick={() => router.push("/jobs")}>Jobs</button>
           <button
-            style={isActive(`/applications/${user?.id}`) ? styles.activeBtn : styles.navBtn}
+            className={isActive(`/applications/${user?.id}`) ? "active-btn" : "nav-btn"}
             onClick={() => user?.id && router.push(`/applications/${user.id}`)}
           >
             Applications
           </button>
-          <button style={isActive("/challenges") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/challenges")}>Challenges</button>
-          <button style={isActive("/leaderboard") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/leaderboard")}>Leaderboard</button>
-          <button style={isActive("/profile") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/profile")}>Profile</button>
-          <button style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
+          <button className={isActive("/challenges") ? "active-btn" : "nav-btn"} onClick={() => router.push("/challenges")}>Challenges</button>
+          <button className={isActive("/leaderboard") ? "active-btn" : "nav-btn"} onClick={() => router.push("/leaderboard")}>Leaderboard</button>
+          <button className={isActive("/profile") ? "active-btn" : "nav-btn"} onClick={() => router.push("/profile")}>Profile</button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       );
     }
     if (role === "company") {
       return (
-        <div style={styles.desktopMenu}>
-          <button style={isActive("/") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/")}>Home</button>
+        <div className="desktop-menu">
+          <button className={isActive("/") ? "active-btn" : "nav-btn"} onClick={() => router.push("/")}>Home</button>
           <button
-            style={isActive(`/company/${companyUsername || ""}`) ? styles.activeBtn : styles.navBtn}
+            className={isActive(`/company/${companyUsername || ""}`) ? "active-btn" : "nav-btn"}
             onClick={() => {
-              if (companyUsername) {
-                router.push(`/company/${companyUsername}`);
-              } else {
-                router.push("/company/profile/edit");
-              }
+              if (companyUsername) router.push(`/company/${companyUsername}`);
+              else router.push("/company/profile/edit");
             }}
           >
             Profile
           </button>
-          <button style={isActive("/company/dashboard") ? styles.activeBtn : styles.navBtn} onClick={() => router.push("/company/dashboard")}>Dashboard</button>
-          <button style={styles.highlightedBtn} onClick={() => router.push("/company/jobs/new")}>Post Job</button>
-          <button style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
+          <button className={isActive("/company/dashboard") ? "active-btn" : "nav-btn"} onClick={() => router.push("/company/dashboard")}>Dashboard</button>
+          <button className="highlighted-btn" onClick={() => router.push("/company/jobs/new")}>Post Job</button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       );
     }
@@ -157,53 +154,50 @@ export default function Navbar() {
     return [];
   };
 
-  // Hamburger menu items (full list) - updated as requested
+  // Hamburger menu items (full list)
   const hamburgerItems = () => {
     if (loading) return <span>Loading...</span>;
     if (!user) {
       return (
         <>
-          <button onClick={() => { closeMenu(); router.push("/"); }} style={styles.mobileBtn}>Home</button>
-          <button onClick={() => { closeMenu(); router.push("/jobs"); }} style={styles.mobileBtn}>Jobs</button>
-          <button onClick={() => { closeMenu(); router.push("/challenges"); }} style={styles.mobileBtn}>Challenges</button>
-          <button onClick={() => { closeMenu(); router.push("/signup"); }} style={styles.mobileBtn}>Signup</button>
-          <button onClick={() => { closeMenu(); router.push("/login"); }} style={styles.mobileBtn}>Login</button>
+          <button onClick={() => { closeMenu(); router.push("/"); }} className="mobile-btn">Home</button>
+          <button onClick={() => { closeMenu(); router.push("/jobs"); }} className="mobile-btn">Jobs</button>
+          <button onClick={() => { closeMenu(); router.push("/challenges"); }} className="mobile-btn">Challenges</button>
+          <button onClick={() => { closeMenu(); router.push("/signup"); }} className="mobile-btn">Signup</button>
+          <button onClick={() => { closeMenu(); router.push("/login"); }} className="mobile-btn">Login</button>
         </>
       );
     }
     if (role === "developer") {
       return (
         <>
-          <button onClick={() => { closeMenu(); router.push("/"); }} style={styles.mobileBtn}>Home</button>
-          <button onClick={() => { closeMenu(); router.push("/jobs"); }} style={styles.mobileBtn}>Jobs</button>
-          <button onClick={() => { closeMenu(); router.push(`/applications/${user.id}`); }} style={styles.mobileBtn}>Track Applications</button>
-          <button onClick={() => { closeMenu(); router.push("/challenges"); }} style={styles.mobileBtn}>Challenges</button>
-          <button onClick={() => { closeMenu(); router.push("/leaderboard"); }} style={styles.mobileBtn}>Leaderboard</button>
-          <button onClick={() => { closeMenu(); router.push("/profile"); }} style={styles.mobileBtn}>My Profile</button>
-          <button onClick={handleLogout} style={styles.mobileLogoutBtn}>Logout</button>
+          <button onClick={() => { closeMenu(); router.push("/"); }} className="mobile-btn">Home</button>
+          <button onClick={() => { closeMenu(); router.push("/jobs"); }} className="mobile-btn">Jobs</button>
+          <button onClick={() => { closeMenu(); router.push(`/applications/${user.id}`); }} className="mobile-btn">Track Applications</button>
+          <button onClick={() => { closeMenu(); router.push("/challenges"); }} className="mobile-btn">Challenges</button>
+          <button onClick={() => { closeMenu(); router.push("/leaderboard"); }} className="mobile-btn">Leaderboard</button>
+          <button onClick={() => { closeMenu(); router.push("/profile"); }} className="mobile-btn">My Profile</button>
+          <button onClick={handleLogout} className="mobile-logout-btn">Logout</button>
         </>
       );
     }
     if (role === "company") {
       return (
         <>
-          <button onClick={() => { closeMenu(); router.push("/"); }} style={styles.mobileBtn}>Home</button>
-          <button onClick={() => { closeMenu(); router.push("/company/dashboard"); }} style={styles.mobileBtn}>Dashboard</button>
-          <button onClick={() => { closeMenu(); router.push("/company/jobs/new"); }} style={styles.mobileBtn}>Post Job</button>
+          <button onClick={() => { closeMenu(); router.push("/"); }} className="mobile-btn">Home</button>
+          <button onClick={() => { closeMenu(); router.push("/company/dashboard"); }} className="mobile-btn">Dashboard</button>
+          <button onClick={() => { closeMenu(); router.push("/company/jobs/new"); }} className="mobile-btn">Post Job</button>
           <button
             onClick={() => {
               closeMenu();
-              if (companyUsername) {
-                router.push(`/company/${companyUsername}`);
-              } else {
-                router.push("/company/profile/edit");
-              }
+              if (companyUsername) router.push(`/company/${companyUsername}`);
+              else router.push("/company/profile/edit");
             }}
-            style={styles.mobileBtn}
+            className="mobile-btn"
           >
             My Profile
           </button>
-          <button onClick={handleLogout} style={styles.mobileLogoutBtn}>Logout</button>
+          <button onClick={handleLogout} className="mobile-logout-btn">Logout</button>
         </>
       );
     }
@@ -213,230 +207,207 @@ export default function Navbar() {
   const bottomItems = bottomTabItems();
 
   return (
-    <nav style={styles.navbar}>
-      <div style={styles.navRow}>
-        <div style={styles.logoArea} onClick={() => router.push("/")}>
+    <nav className="navbar">
+      <div className="nav-row">
+        <div className="logo-area" onClick={() => router.push("/")}>
           <img src="/favicon.ico" alt="Logo" width="24" height="24" style={{ width: '24px', height: '24px' }} />
-          <span style={styles.logoText}>OfSkillJob</span>
+          <span className="logo-text">OfSkillJob</span>
         </div>
-        <div style={styles.desktopWrapper}>
+        <div className="desktop-wrapper">
           {desktopButtons()}
         </div>
-        <button onClick={toggleMenu} style={styles.hamburger}>
-          <span style={{ ...styles.hamburgerLine, transform: mobileMenuOpen ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
-          <span style={{ ...styles.hamburgerLine, opacity: mobileMenuOpen ? 0 : 1 }} />
-          <span style={{ ...styles.hamburgerLine, transform: mobileMenuOpen ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
+        <button onClick={toggleMenu} className="hamburger">
+          <span className="hamburger-line" style={{ transform: mobileMenuOpen ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
+          <span className="hamburger-line" style={{ opacity: mobileMenuOpen ? 0 : 1 }} />
+          <span className="hamburger-line" style={{ transform: mobileMenuOpen ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
         </button>
       </div>
-      <div style={{ ...styles.mobileMenu, display: mobileMenuOpen ? "flex" : "none" }}>
+      <div className={`mobile-menu ${mobileMenuOpen ? "open" : ""}`}>
         {hamburgerItems()}
       </div>
 
-      {/* Bottom tab bar - only visible on mobile */}
+      {/* Bottom tab bar */}
       {bottomItems && bottomItems.length > 0 && (
-        <div style={styles.bottomTabBar}>
+        <div className="bottom-tab-bar">
           {bottomItems.map((item) => (
             <button
               key={item.path}
-              style={{
-                ...styles.bottomTabBtn,
-                ...(pathname === item.path ? styles.bottomTabActive : {}),
-              }}
+              className={`bottom-tab-btn ${pathname === item.path ? "active" : ""}`}
               onClick={() => router.push(item.path)}
             >
-              <span style={styles.tabIcon}>{item.icon}</span>
-              <span style={styles.tabLabel}>{item.label}</span>
+              <span className="tab-icon">{item.icon}</span>
+              <span className="tab-label">{item.label}</span>
             </button>
           ))}
         </div>
       )}
+
+      <style jsx>{`
+        .navbar {
+          background: #0f172a;
+          color: white;
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .nav-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 24px;
+        }
+        .logo-area {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          cursor: pointer;
+        }
+        .logo-text {
+          font-weight: 800;
+          font-size: 20px;
+          letter-spacing: -0.5px;
+        }
+        .desktop-wrapper {
+          display: flex;
+        }
+        .desktop-menu {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+        .nav-btn, .active-btn, .primary-btn, .secondary-btn, .highlighted-btn, .logout-btn {
+          background: transparent;
+          border: none;
+          color: #cbd5e1;
+          cursor: pointer;
+          padding: 8px 12px;
+          font-size: 14px;
+          font-weight: 500;
+          border-radius: 8px;
+          transition: all 0.2s;
+        }
+        .active-btn {
+          background: #334155;
+          color: white;
+        }
+        .primary-btn {
+          background: #2563eb;
+          color: white;
+        }
+        .secondary-btn {
+          background: transparent;
+          border: 1px solid #2563eb;
+          color: #2563eb;
+        }
+        .highlighted-btn {
+          background: #f59e0b;
+          color: #0f172a;
+          font-weight: 700;
+        }
+        .logout-btn {
+          background: #dc2626;
+          color: white;
+        }
+        .hamburger {
+          display: none;
+          flex-direction: column;
+          justify-content: space-between;
+          width: 28px;
+          height: 20px;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+        }
+        .hamburger-line {
+          width: 100%;
+          height: 2px;
+          background: white;
+          transition: all 0.2s ease;
+        }
+        .mobile-menu {
+          flex-direction: column;
+          background: #1e293b;
+          padding: 16px 24px;
+          gap: 12px;
+          border-top: 1px solid #334155;
+          display: none;
+        }
+        .mobile-menu.open {
+          display: flex;
+        }
+        .mobile-btn {
+          background: transparent;
+          border: none;
+          color: #cbd5e1;
+          cursor: pointer;
+          padding: 10px 0;
+          font-size: 16px;
+          text-align: left;
+          width: 100%;
+        }
+        .mobile-logout-btn {
+          background: #dc2626;
+          color: white;
+          border: none;
+          padding: 10px 0;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 16px;
+          margin-top: 8px;
+        }
+        .bottom-tab-bar {
+          display: none;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: #0f172a;
+          border-top: 1px solid #334155;
+          justify-content: space-around;
+          padding: 8px 0;
+          z-index: 1000;
+        }
+        .bottom-tab-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: transparent;
+          border: none;
+          color: #cbd5e1;
+          cursor: pointer;
+          padding: 6px 12px;
+          border-radius: 8px;
+          transition: all 0.2s;
+          font-size: 12px;
+        }
+        .bottom-tab-btn.active {
+          color: #3b82f6;
+        }
+        .tab-icon {
+          font-size: 22px;
+          margin-bottom: 2px;
+        }
+        .tab-label {
+          font-size: 10px;
+          font-weight: 500;
+        }
+        @media (max-width: 768px) {
+          .desktop-wrapper {
+            display: none;
+          }
+          .hamburger {
+            display: flex;
+          }
+          .bottom-tab-bar {
+            display: flex;
+          }
+          body {
+            padding-bottom: 70px;
+          }
+        }
+      `}</style>
     </nav>
   );
-}
-
-const styles = {
-  navbar: {
-    background: "#0f172a",
-    color: "white",
-    position: "sticky",
-    top: 0,
-    zIndex: 1000,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-  },
-  navRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "12px 24px",
-  },
-  logoArea: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    cursor: "pointer",
-  },
-  logoText: {
-    fontWeight: "800",
-    fontSize: "20px",
-    letterSpacing: "-0.5px",
-  },
-  desktopWrapper: {
-    display: "flex",
-  },
-  desktopMenu: {
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-  },
-  navBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#cbd5e1",
-    cursor: "pointer",
-    padding: "8px 12px",
-    fontSize: "14px",
-    fontWeight: "500",
-    borderRadius: "8px",
-  },
-  activeBtn: {
-    background: "#334155",
-    color: "white",
-  },
-  primaryBtn: {
-    background: "#2563eb",
-    color: "white",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    border: "none",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  secondaryBtn: {
-    background: "transparent",
-    border: "1px solid #2563eb",
-    color: "#2563eb",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  highlightedBtn: {
-    background: "#f59e0b",
-    color: "#0f172a",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    border: "none",
-    fontWeight: "700",
-    cursor: "pointer",
-  },
-  logoutBtn: {
-    background: "#dc2626",
-    color: "white",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    border: "none",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  hamburger: {
-    display: "none",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    width: "28px",
-    height: "20px",
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    padding: 0,
-  },
-  hamburgerLine: {
-    width: "100%",
-    height: "2px",
-    background: "white",
-    transition: "all 0.2s ease",
-  },
-  mobileMenu: {
-    flexDirection: "column",
-    background: "#1e293b",
-    padding: "16px 24px",
-    gap: "12px",
-    borderTop: "1px solid #334155",
-  },
-  mobileBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#cbd5e1",
-    cursor: "pointer",
-    padding: "10px 0",
-    fontSize: "16px",
-    textAlign: "left",
-    width: "100%",
-  },
-  mobileLogoutBtn: {
-    background: "#dc2626",
-    color: "white",
-    border: "none",
-    padding: "10px 0",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "16px",
-    marginTop: "8px",
-  },
-  bottomTabBar: {
-    display: "none",
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: "#0f172a",
-    borderTop: "1px solid #334155",
-    justifyContent: "space-around",
-    padding: "8px 0",
-    zIndex: 1000,
-  },
-  bottomTabBtn: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    background: "transparent",
-    border: "none",
-    color: "#cbd5e1",
-    cursor: "pointer",
-    padding: "6px 12px",
-    borderRadius: "8px",
-    transition: "all 0.2s",
-    fontSize: "12px",
-  },
-  bottomTabActive: {
-    color: "#3b82f6",
-  },
-  tabIcon: {
-    fontSize: "22px",
-    marginBottom: "2px",
-  },
-  tabLabel: {
-    fontSize: "10px",
-    fontWeight: "500",
-  },
-};
-
-// Media query for mobile
-if (typeof window !== "undefined") {
-  const mediaQuery = window.matchMedia("(max-width: 768px)");
-  const handleResize = (e) => {
-    const desktopWrapper = document.querySelector(".desktop-wrapper");
-    const hamburger = document.querySelector(".hamburger");
-    const bottomBar = document.querySelector(".bottom-tab-bar");
-    if (e.matches) {
-      if (desktopWrapper) desktopWrapper.style.display = "none";
-      if (hamburger) hamburger.style.display = "flex";
-      if (bottomBar) bottomBar.style.display = "flex";
-    } else {
-      if (desktopWrapper) desktopWrapper.style.display = "flex";
-      if (hamburger) hamburger.style.display = "none";
-      if (bottomBar) bottomBar.style.display = "none";
-    }
-  };
-  mediaQuery.addEventListener("change", handleResize);
-  handleResize(mediaQuery);
 }
