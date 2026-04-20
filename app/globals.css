@@ -100,8 +100,104 @@ footer {
   margin-top: 40px;
 }
 
+/* ========== NAVBAR POLISHED BUTTON STYLES (DESKTOP) ========== */
+/* Base button styles */
+.desktop-menu .nav-btn,
+.desktop-menu .active-btn,
+.desktop-menu .primary-btn,
+.desktop-menu .secondary-btn,
+.desktop-menu .highlighted-btn,
+.desktop-menu .logout-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 40px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Hover effect */
+.desktop-menu .nav-btn:hover,
+.desktop-menu .active-btn:hover,
+.desktop-menu .primary-btn:hover,
+.desktop-menu .secondary-btn:hover,
+.desktop-menu .highlighted-btn:hover,
+.desktop-menu .logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+/* Click effect */
+.desktop-menu .nav-btn:active,
+.desktop-menu .active-btn:active,
+.desktop-menu .primary-btn:active,
+.desktop-menu .secondary-btn:active,
+.desktop-menu .highlighted-btn:active,
+.desktop-menu .logout-btn:active {
+  transform: scale(0.96);
+}
+/* Specific button colors */
+.desktop-menu .nav-btn {
+  background: transparent;
+  color: #cbd5e1;
+}
+.desktop-menu .nav-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+.desktop-menu .active-btn {
+  background: #334155;
+  color: white;
+}
+.desktop-menu .active-btn:hover {
+  background: #3b4a63;
+}
+.desktop-menu .primary-btn {
+  background: #2563eb;
+  color: white;
+}
+.desktop-menu .primary-btn:hover {
+  background: #1d4ed8;
+}
+.desktop-menu .secondary-btn {
+  background: transparent;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+}
+.desktop-menu .secondary-btn:hover {
+  background: rgba(37,99,235,0.1);
+}
+.desktop-menu .highlighted-btn {
+  background: #f59e0b;
+  color: #0f172a;
+}
+.desktop-menu .highlighted-btn:hover {
+  background: #d97706;
+}
+.desktop-menu .logout-btn {
+  background: #dc2626;
+  color: white;
+}
+.desktop-menu .logout-btn:hover {
+  background: #b91c1c;
+}
+/* Ensure desktop menu layout */
+.desktop-menu {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 /* ========== MOBILE RESPONSIVE ========== */
 @media (max-width: 768px) {
+  /* Hide desktop menu on mobile */
+  .desktop-menu {
+    display: none !important;
+  }
+
   /* Make all grids stack */
   [style*="display: grid"] {
     grid-template-columns: 1fr !important;
@@ -257,6 +353,7 @@ footer {
   }
 
   /* ========== PROFILE PAGE ADDITIONAL IMPROVEMENTS ========== */
+  /* Make hero buttons (Edit Profile, Share, PDF, AI Bio) wrap horizontally */
   .profile-hero-actions {
     display: flex !important;
     flex-wrap: wrap !important;
@@ -269,56 +366,10 @@ footer {
     padding: 6px 12px !important;
     font-size: 12px !important;
   }
+  /* Stats grid becomes 2 columns on mobile */
   .profile-stats-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 10px !important;
-  }
-}
-
-/* ========== DESKTOP NAVBAR BUTTON FIX & COLOR RESTORATION ========== */
-@media (min-width: 769px) {
-  .desktop-menu button,
-  .desktop-menu .nav-btn,
-  .desktop-menu .active-btn,
-  .desktop-menu .primary-btn,
-  .desktop-menu .secondary-btn,
-  .desktop-menu .highlighted-btn,
-  .desktop-menu .logout-btn {
-    width: auto !important;
-    display: inline-flex !important;
-    margin-bottom: 0 !important;
-  }
-  .desktop-menu {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 12px !important;
-    align-items: center !important;
-  }
-  /* Restore original button colors */
-  .desktop-menu .primary-btn {
-    background: #2563eb !important;
-    color: white !important;
-  }
-  .desktop-menu .secondary-btn {
-    background: transparent !important;
-    border: 1px solid #2563eb !important;
-    color: #2563eb !important;
-  }
-  .desktop-menu .highlighted-btn {
-    background: #f59e0b !important;
-    color: #0f172a !important;
-  }
-  .desktop-menu .logout-btn {
-    background: #dc2626 !important;
-    color: white !important;
-  }
-  .desktop-menu .nav-btn {
-    background: transparent !important;
-    color: #cbd5e1 !important;
-  }
-  .desktop-menu .active-btn {
-    background: #334155 !important;
-    color: white !important;
   }
 }
