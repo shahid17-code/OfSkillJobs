@@ -164,4 +164,116 @@ footer {
   body {
     padding-bottom: 70px;
   }
+
+  /* ========== PAGE-SPECIFIC MOBILE FIXES ========== */
+
+  /* 1. Jobs page – filter bar vertical, jobs remain as cards */
+  .jobs-filter-bar,
+  [class*="filterBar"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .jobs-filter-bar input,
+  .jobs-filter-bar select,
+  .jobs-filter-bar button {
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* 2. Job detail page – center hero content, wrap buttons */
+  [class*="heroTop"] {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+  [class*="heroActions"] {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+  }
+  [class*="heroActions"] button {
+    margin: 0.25rem !important;
+    width: auto !important;
+  }
+  [class*="pageSubtitle"] {
+    font-size: 0.9rem !important;
+  }
+
+  /* 3. Challenges page – badges and buttons wrap, text size adjust */
+  [class*="badgeGroup"] {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  [class*="viewBtn"] {
+    width: auto !important;
+    margin-top: 0.5rem !important;
+  }
+  .challenge-card .difficulty,
+  .challenge-card .points {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+  }
+
+  /* 4. Profile page – quick action buttons stack vertically, stats grid stack */
+  [class*="actionBtn"],
+  [class*="actionBtnSecondary"] {
+    width: 100% !important;
+    text-align: center !important;
+  }
+  [class*="statsGrid"] {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /* 5. Track application page – timeline vertical, activity cards stack */
+  .application-timeline {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .timeline-step {
+    margin-bottom: 1rem !important;
+    width: 100% !important;
+  }
+  .activity-card {
+    width: 100% !important;
+    margin-bottom: 1rem !important;
+  }
+  .applications-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* 6. Leaderboard – table scrollable, top 3 cards stack */
+  .leaderboard-table {
+    display: block;
+    overflow-x: auto;
+  }
+  .top-cards {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  .leaderboard-rank-card {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Desktop navbar button fix – ensures buttons stay inline */
+@media (min-width: 769px) {
+  .desktop-menu button,
+  .desktop-menu .nav-btn,
+  .desktop-menu .active-btn,
+  .desktop-menu .primary-btn,
+  .desktop-menu .secondary-btn,
+  .desktop-menu .highlighted-btn,
+  .desktop-menu .logout-btn {
+    width: auto !important;
+    display: inline-flex;
+    margin-bottom: 0;
+  }
+  .desktop-menu {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+    align-items: center !important;
+  }
 }
