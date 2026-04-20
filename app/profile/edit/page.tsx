@@ -344,6 +344,7 @@ export default function EditProfile() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
+        {/* Header */}
         <div style={styles.header}>
           <div style={styles.headerLeft}>
             <div style={styles.avatar}>✏️</div>
@@ -411,7 +412,7 @@ export default function EditProfile() {
             <textarea name="bio" value={form.bio} onChange={handleChange} style={styles.textarea} rows={4} placeholder="Short professional summary" />
           </div>
 
-          {/* Skills Section */}
+          {/* Skills Section – improved spacing */}
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Skills</h2>
             <div style={styles.skillContainer}>
@@ -446,7 +447,7 @@ export default function EditProfile() {
             </div>
           </div>
 
-          {/* Languages Section */}
+          {/* Languages Section – improved spacing */}
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Languages</h2>
             <div style={styles.skillContainer}>
@@ -779,7 +780,7 @@ export default function EditProfile() {
   );
 }
 
-// Styles with proper TypeScript typing and `as const` for literal values
+// ---------- Styles – improved for skills/languages spacing with proper typing ----------
 const styles: { [key: string]: React.CSSProperties } = {
   page: {
     background: "#f8fafc",
@@ -996,18 +997,19 @@ const styles: { [key: string]: React.CSSProperties } = {
   skillContainer: {
     display: "flex",
     flexDirection: "column" as const,
-    gap: 12,
+    gap: 16,
   },
   skillTags: {
     display: "flex",
     flexWrap: "wrap" as const,
-    gap: 8,
+    gap: 10,
+    marginBottom: 4,
   },
   skillTag: {
     background: "#eef2ff",
-    padding: "6px 12px",
+    padding: "8px 14px",
     borderRadius: 40,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 500,
     color: "#1e40af",
     display: "inline-flex",
@@ -1018,42 +1020,47 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    fontSize: 12,
+    fontSize: 14,
     color: "#1e40af",
     padding: 0,
-    marginLeft: 4,
+    marginLeft: 6,
   },
   skillInputWrapper: {
     display: "flex",
-    gap: 8,
+    gap: 12,
+    alignItems: "center",
+    flexWrap: "wrap" as const,
   },
   skillInput: {
-    flex: 1,
-    padding: "10px 14px",
+    flex: 3,
+    padding: "12px 16px",
     borderRadius: 12,
     border: "1px solid #e2e8f0",
     fontSize: 14,
+    minWidth: "200px",
   },
   skillAddBtn: {
-    padding: "10px 16px",
+    padding: "12px 20px",
     borderRadius: 12,
     background: "#2563eb",
     color: "#fff",
     border: "none",
     fontWeight: 600,
     cursor: "pointer",
+    fontSize: 14,
   },
   skillSuggestions: {
     display: "flex",
     flexWrap: "wrap" as const,
-    gap: 8,
+    gap: 10,
+    marginTop: 8,
   },
   suggestionChip: {
-    padding: "6px 12px",
+    padding: "8px 14px",
     borderRadius: 40,
     background: "#f1f5f9",
     border: "1px solid #e2e8f0",
-    fontSize: 12,
+    fontSize: 13,
     cursor: "pointer",
     color: "#0f172a",
   },
