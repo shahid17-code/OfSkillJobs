@@ -101,7 +101,6 @@ footer {
 }
 
 /* ========== NAVBAR POLISHED BUTTON STYLES (DESKTOP) ========== */
-/* Base button styles */
 .desktop-menu .nav-btn,
 .desktop-menu .active-btn,
 .desktop-menu .primary-btn,
@@ -120,7 +119,6 @@ footer {
   align-items: center;
   gap: 6px;
 }
-/* Hover effect */
 .desktop-menu .nav-btn:hover,
 .desktop-menu .active-btn:hover,
 .desktop-menu .primary-btn:hover,
@@ -130,7 +128,6 @@ footer {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
-/* Click effect */
 .desktop-menu .nav-btn:active,
 .desktop-menu .active-btn:active,
 .desktop-menu .primary-btn:active,
@@ -139,7 +136,6 @@ footer {
 .desktop-menu .logout-btn:active {
   transform: scale(0.96);
 }
-/* Specific button colors */
 .desktop-menu .nav-btn {
   background: transparent;
   color: #cbd5e1;
@@ -184,7 +180,6 @@ footer {
 .desktop-menu .logout-btn:hover {
   background: #b91c1c;
 }
-/* Ensure desktop menu layout */
 .desktop-menu {
   display: flex;
   gap: 12px;
@@ -193,60 +188,50 @@ footer {
 
 /* ========== MOBILE RESPONSIVE ========== */
 @media (max-width: 768px) {
-  /* Hide desktop menu on mobile */
   .desktop-menu {
     display: none !important;
   }
 
-  /* Make all grids stack */
   [style*="display: grid"] {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
   }
 
-  /* Hero text adjustments */
   h1, [style*="fontSize: 48px"], [style*="fontSize: 38px"] {
     font-size: 2rem !important;
   }
 
-  /* Stats bar vertical */
   [style*="statsBar"], [style*="display: flex"][style*="justifyContent: space-between"] {
     flex-direction: column !important;
     text-align: center;
     gap: 1rem !important;
   }
 
-  /* Cards full width */
   [style*="borderRadius: 20px"][style*="padding: 20px"],
   [style*="borderRadius: 24px"][style*="padding: 32px"] {
     width: 100% !important;
     margin: 0 0 1rem 0 !important;
   }
 
-  /* Buttons full width (global fallback) */
   button, [style*="padding: 12px 24px"] {
     width: 100%;
     margin-bottom: 0.5rem;
   }
 
-  /* Two column layout becomes one */
   [style*="gridTemplateColumns: 1.6fr 0.9fr"],
   [style*="gridTemplateColumns: 2fr 1fr"] {
     grid-template-columns: 1fr !important;
   }
 
-  /* Sidebar goes below main content */
   aside, [style*="sideColumn"] {
     order: 2;
   }
 
-  /* Form inputs full width */
   input, select, textarea {
     width: 100% !important;
     box-sizing: border-box;
   }
 
-  /* Filter bars stack */
   .filter-bar, [style*="filterBar"] {
     flex-direction: column;
     align-items: stretch;
@@ -256,14 +241,11 @@ footer {
     margin-bottom: 0.5rem;
   }
 
-  /* Padding for bottom tab bar */
   body {
     padding-bottom: 70px;
   }
 
   /* ========== PAGE-SPECIFIC MOBILE FIXES ========== */
-
-  /* 1. Jobs page – filter bar vertical, jobs remain as cards */
   .jobs-filter-bar,
   [class*="filterBar"] {
     flex-direction: column !important;
@@ -276,7 +258,6 @@ footer {
     margin-bottom: 0.5rem !important;
   }
 
-  /* 2. Job detail page – center hero content, wrap buttons */
   [class*="heroTop"] {
     flex-direction: column !important;
     align-items: center !important;
@@ -294,7 +275,6 @@ footer {
     font-size: 0.9rem !important;
   }
 
-  /* 3. Challenges page – badges and buttons wrap, text size adjust */
   [class*="badgeGroup"] {
     flex-wrap: wrap !important;
     justify-content: center !important;
@@ -309,7 +289,6 @@ footer {
     padding: 0.25rem 0.5rem !important;
   }
 
-  /* 4. Profile page – quick action buttons stack vertically, stats grid stack */
   [class*="actionBtn"],
   [class*="actionBtnSecondary"] {
     width: 100% !important;
@@ -320,7 +299,6 @@ footer {
     gap: 0.5rem !important;
   }
 
-  /* 5. Track application page – timeline vertical, activity cards stack */
   .application-timeline {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -339,7 +317,6 @@ footer {
     white-space: nowrap;
   }
 
-  /* 6. Leaderboard – table scrollable, top 3 cards stack */
   .leaderboard-table {
     display: block;
     overflow-x: auto;
@@ -352,27 +329,27 @@ footer {
     margin-bottom: 1rem;
   }
 
-  /* ========== PROFILE PAGE ADDITIONAL IMPROVEMENTS ========== */
-  /* Force hero buttons (Edit Profile, Share, PDF, AI Bio) to be horizontal */
-  .profile-hero-actions,
-  .profile-hero-actions > div {
+  /* ========== PROFILE PAGE – STRONG OVERRIDE ========== */
+  .profile-hero-actions {
     display: flex !important;
+    flex-direction: row !important;
     flex-wrap: wrap !important;
-    gap: 8px !important;
     justify-content: center !important;
+    gap: 8px !important;
   }
   .profile-hero-actions button,
-  .profile-hero-actions a,
   .profile-hero-actions .secondary-btn,
   .profile-hero-actions .edit-btn,
   .profile-hero-actions .ghost-btn {
     width: auto !important;
-    flex: 0 0 auto !important;
+    min-width: 80px !important;
+    flex: 0 1 auto !important;
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+    display: inline-flex !important;
     padding: 6px 12px !important;
     font-size: 12px !important;
-    display: inline-flex !important;
   }
-  /* Stats grid becomes 2 columns on mobile */
   .profile-stats-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
