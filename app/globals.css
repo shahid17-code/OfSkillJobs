@@ -223,7 +223,7 @@ footer {
     margin: 0 0 1rem 0 !important;
   }
 
-  /* Buttons full width */
+  /* Buttons full width (global fallback) */
   button, [style*="padding: 12px 24px"] {
     width: 100%;
     margin-bottom: 0.5rem;
@@ -353,18 +353,24 @@ footer {
   }
 
   /* ========== PROFILE PAGE ADDITIONAL IMPROVEMENTS ========== */
-  /* Make hero buttons (Edit Profile, Share, PDF, AI Bio) wrap horizontally */
-  .profile-hero-actions {
+  /* Force hero buttons (Edit Profile, Share, PDF, AI Bio) to be horizontal */
+  .profile-hero-actions,
+  .profile-hero-actions > div {
     display: flex !important;
     flex-wrap: wrap !important;
     gap: 8px !important;
     justify-content: center !important;
   }
-  .profile-hero-actions button {
+  .profile-hero-actions button,
+  .profile-hero-actions a,
+  .profile-hero-actions .secondary-btn,
+  .profile-hero-actions .edit-btn,
+  .profile-hero-actions .ghost-btn {
     width: auto !important;
-    flex: 0 0 auto;
+    flex: 0 0 auto !important;
     padding: 6px 12px !important;
     font-size: 12px !important;
+    display: inline-flex !important;
   }
   /* Stats grid becomes 2 columns on mobile */
   .profile-stats-grid {
