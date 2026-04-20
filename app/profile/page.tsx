@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-
 type ToastType = "success" | "error" | "info";
 
 // ---------- Helpers ----------
@@ -58,7 +57,6 @@ function ProfileInner() {
   const toastTimerRef = useRef<number | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
 
-  // Dark mode
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("os_dark_mode") === "1";
@@ -107,7 +105,6 @@ function ProfileInner() {
       setProfile(profileData);
       setProjects(submissionsData || []);
 
-      // Load badges for this user
       await loadBadges(user.id);
     } catch (err) {
       console.error("loadData error:", err);
@@ -143,7 +140,6 @@ function ProfileInner() {
     document.documentElement.style.background = next ? "#0b1220" : "#f8fafc";
   }
 
-  // ========== ADVANCED PROFILE COMPLETION ==========
   function profileCompletionDetails() {
     if (!profile) return { score: 0, total: 0, completed: [], missing: [] };
     const items = [
@@ -372,7 +368,6 @@ function ProfileInner() {
     );
   }
 
-  // ----- Premium UI (inspired by company profile) -----
   const containerStyle = {
     maxWidth: 1120,
     margin: "0 auto",
@@ -414,7 +409,6 @@ function ProfileInner() {
 
   return (
     <div style={containerStyle}>
-      {/* Hero section */}
       <div style={{ marginBottom: 18 }}>
         <div
           style={{
@@ -436,7 +430,8 @@ function ProfileInner() {
                 </div>
               )}
             </div>
-            <div style={styles.heroActions}>
+            {/* ADDED CLASS NAME: profile-hero-actions */}
+            <div style={styles.heroActions} className="profile-hero-actions">
               <button onClick={shareProfile} style={styles.secondaryBtn}>
                 Share Profile
               </button>
@@ -505,8 +500,8 @@ function ProfileInner() {
         </div>
       </div>
 
-      {/* Stats grid */}
-      <div style={styles.statsGrid}>
+      {/* ADDED CLASS NAME: profile-stats-grid */}
+      <div style={styles.statsGrid} className="profile-stats-grid">
         <div style={statCard(dark)}>
           <div style={styles.statValue}>{profile.views || 0}</div>
           <div style={styles.statLabel}>Profile Views</div>
@@ -525,7 +520,7 @@ function ProfileInner() {
         </div>
       </div>
 
-      {/* Profile Completion + Points + Badges */}
+      {/* Profile Completion + Points + Badges (unchanged) */}
       <div style={{ ...cardStyle, marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div style={{ flex: 1 }}>
@@ -605,7 +600,6 @@ function ProfileInner() {
           </div>
         )}
 
-        {/* Points and Badges section */}
         <div style={{ marginTop: 20, borderTop: `1px solid ${dark ? "#1e293b" : "#eef2f7"}`, paddingTop: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div>
@@ -627,7 +621,6 @@ function ProfileInner() {
           </div>
         </div>
 
-        {/* Skill badges (existing) */}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
           {skillBadges.length ? skillBadges.map(b => (
             <span key={b} style={styles.badge}>{b}</span>
@@ -637,9 +630,9 @@ function ProfileInner() {
         </div>
       </div>
 
-      {/* Two column layout - unchanged */}
+      {/* Two column layout unchanged */}
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.9fr", gap: 18, alignItems: "start" }}>
-        {/* Left column */}
+        {/* Left column unchanged */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={cardStyle}>
             <h2 style={sectionTitle}>About</h2>
@@ -708,7 +701,7 @@ function ProfileInner() {
           </div>
         </div>
 
-        {/* Right column */}
+        {/* Right column unchanged */}
         <aside style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Contact & Links</h2>
@@ -777,7 +770,7 @@ function ProfileInner() {
         </aside>
       </div>
 
-      {/* Hidden PDF preview */}
+      {/* Hidden PDF preview unchanged */}
       <div style={{ display: "none" }}>
         <div ref={previewRef}>
           <div className="cv-wrapper">
@@ -856,7 +849,7 @@ function ProfileInner() {
   );
 }
 
-// ---------- Styles (mirroring company profile) ----------
+// ---------- Styles (unchanged) ----------
 const styles = {
   heroBanner: {
     borderRadius: 20,
