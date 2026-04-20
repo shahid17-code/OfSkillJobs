@@ -27,10 +27,19 @@
   }
 }
 
+/* Prevent horizontal overflow and fix mobile refresh layout shift */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  max-width: 100%;
 }
 
 body {

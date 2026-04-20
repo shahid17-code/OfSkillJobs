@@ -209,7 +209,7 @@ export default function JobsPage() {
 
   return (
     <div style={pageShell}>
-      <div style={heroCard}>
+      <div className="hero-card" style={heroCard}>
         <div style={heroLeft}>
           <p style={eyebrow}>Public jobs</p>
           <h1 style={pageTitle}>Show skills, get hired</h1>
@@ -219,16 +219,13 @@ export default function JobsPage() {
           </p>
 
           <div style={heroActions}>
-            <button type="button" style={primaryHeroBtn} onClick={loadJobs}>
-              Refresh jobs
-            </button>
             <button type="button" style={ghostHeroBtn} onClick={() => router.push("/")}>
               Back to home
             </button>
           </div>
         </div>
 
-        <div style={heroStats}>
+        <div className="stats-grid" style={heroStats}>
           <StatBox label="Active jobs" value={String(stats.total)} />
           <StatBox label="Task-based roles" value={String(stats.taskBased)} />
           <StatBox label="Remote jobs" value={String(stats.remote)} />
@@ -352,6 +349,22 @@ export default function JobsPage() {
           </p>
         </div>
       )}
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .hero-card {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 20px !important;
+          }
+          .stats-grid {
+            width: 100% !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+            min-height: 110px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -423,17 +436,6 @@ const heroActions: React.CSSProperties = {
   gap: 10,
   flexWrap: "wrap",
   marginTop: 18,
-};
-
-const primaryHeroBtn: React.CSSProperties = {
-  background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
-  color: "white",
-  border: "none",
-  padding: "12px 16px",
-  borderRadius: 14,
-  cursor: "pointer",
-  fontWeight: 800,
-  boxShadow: "0 10px 25px rgba(37, 99, 235, 0.22)",
 };
 
 const ghostHeroBtn: React.CSSProperties = {
