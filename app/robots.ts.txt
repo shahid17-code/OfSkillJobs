@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://ofskilljobs.vercel.app'
-  
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL || 'https://ofskilljobs.vercel.app'
+
   return {
     rules: {
       userAgent: '*',
@@ -12,10 +13,10 @@ export default function robots(): MetadataRoute.Robots {
         '/company/profile/edit',
         '/company/jobs/new',
         '/company/jobs/edit/',
-        '/applications/*',
-        '/api/*',
+        '/applications/',
+        '/api/',
         '/auth/callback',
-        '/submit/*',
+        '/submit/',
       ],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
