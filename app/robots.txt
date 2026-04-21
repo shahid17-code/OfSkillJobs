@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /profile/edit
+Disallow: /company/profile/edit
+Disallow: /company/jobs/new
+Disallow: /company/jobs/edit/
+Disallow: /applications/
+Disallow: /api/
+Disallow: /auth/callback
+Disallow: /submit/
+
+Sitemap: https://ofskilljobs.vercel.app/sitemap.xml
