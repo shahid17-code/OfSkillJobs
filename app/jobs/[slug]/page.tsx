@@ -141,7 +141,6 @@ export default function JobDetailPage() {
 
       setJob(jobData as Job);
 
-      // Fetch company data including email
       const { data: companyData, error: companyError } = await supabase
         .from("users")
         .select(
@@ -386,37 +385,39 @@ export default function JobDetailPage() {
   return (
     <div style={pageShell}>
       <div
+        className="job-hero"
         style={{
           ...heroCard,
+          // Lighter gradient
           backgroundImage: company?.cover_url
-            ? `linear-gradient(180deg, rgba(15,23,42,0.20), rgba(15,23,42,0.82)), url(${company.cover_url})`
-            : "linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #2563eb 100%)",
+            ? `linear-gradient(135deg, rgba(255,255,255,0.96), rgba(241,245,249,0.98)), url(${company.cover_url})`
+            : "linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)",
         }}
       >
-        <div style={heroTop}>
-          <div style={brandBlock}>
-            <div style={brandLogo}>
-              {company?.logo_url ? (
-                <img
-                  src={company.logo_url}
-                  alt={company?.company_name || "Company"}
-                  style={brandLogoImg}
-                />
-              ) : (
-                <div style={brandFallback}>
-                  {(company?.company_name || "C").charAt(0).toUpperCase()}
-                </div>
-              )}
+        <div className="hero-container">
+          <div className="hero-left">
+            <div className="logo-wrapper">
+              <div style={brandLogo}>
+                {company?.logo_url ? (
+                  <img
+                    src={company.logo_url}
+                    alt={company?.company_name || "Company"}
+                    style={brandLogoImg}
+                  />
+                ) : (
+                  <div style={brandFallback}>
+                    {(company?.company_name || "C").charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
             </div>
-
-            <div>
+            <div className="job-details">
               <p style={eyebrow}>Skill-based opportunity</p>
               <h1 style={pageTitle}>{job.title}</h1>
               <p style={pageSubtitle}>
                 {company?.company_name || "Company"} · {job.role_type || "Role"} ·{" "}
                 {job.location || "Location not set"}
               </p>
-
               <div style={metaPills}>
                 <span style={statusPill(expired ? "closed" : "open")}>
                   {expired ? "Closed" : "Open"}
@@ -431,8 +432,7 @@ export default function JobDetailPage() {
               </div>
             </div>
           </div>
-
-          <div style={heroActions}>
+          <div className="hero-actions">
             {company?.username && (
               <button
                 type="button"
@@ -544,9 +544,17 @@ export default function JobDetailPage() {
                     Website
                   </a>
                 )}
-                {/* Email button – force clickable */}
                 {company?.email ? (
-                  <a href={`mailto:${company.email}`} style={linkPill}>
+                  <a
+                    href={`mailto:${company.email}`}
+                    style={linkPill}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setTimeout(() => {
+                        window.location.href = `mailto:${company.email}`;
+                      }, 100);
+                    }}
+                  >
                     Email
                   </a>
                 ) : (
@@ -712,53 +720,176 @@ export default function JobDetailPage() {
 
       {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
 
-      {/* Global style for mobile layout – will always apply */}
       <style>{`
-        @media (max-width: 768px) {
-          .brandBlock {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 12px !important;
-          }
-          .brandBlock > div:last-child {
-            width: 100% !important;
-          }
-          .heroTop {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-          }
-          .heroActions {
-            margin-top: 16px !important;
-            justify-content: flex-start !important;
-          }
-          .heroActions button {
-            width: auto !important;
-          }
-          .eyebrow {
-            font-size: 11px !important;
-          }
-          .pageTitle {
-            font-size: 28px !important;
-            text-align: left !important;
-          }
-          .pageSubtitle {
-            font-size: 14px !important;
-            text-align: left !important;
-          }
-          .metaPills {
-            justify-content: flex-start !important;
-          }
-        }
-      `}</style>
+  @media (max-width: 768px) {
+    .logo-wrapper {
+      display: none !important;
+    }
+    .hero-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .job-details {
+      width: 100%;
+      margin-left: 16px; /* 👈 adds left space for skill‑based opportunity and all text */
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-start;
+      margin-left: 16px; /* 👈 aligns buttons with the text */
+    }
+    .hero-actions button {
+      width: auto !important;
+      margin: 0 !important;
+    }
+    .eyebrow {
+      font-size: 11px !important;
+      text-align: left !important;
+    }
+    .pageTitle {
+      font-size: 28px !important;
+      text-align: left !important;
+    }
+    .pageSubtitle {
+      font-size: 14px !important;
+      text-align: left !important;
+    }
+    .metaPills {
+      justify-content: flex-start !important;
+      gap: 6px !important;
+    }
+    .metaPills span {
+      font-size: 11px !important;
+      padding: 4px 8px !important;
+    }
+    .layoutGrid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  @media (min-width: 769px) {
+    .hero-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+    }
+    .hero-left {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .logo-wrapper {
+      flex-shrink: 0;
+    }
+    .job-details {
+      flex: 1;
+      margin-left: 20px;
+    }
+    .eyebrow {
+      margin-top: 0;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+  }
+`}</style><style>{`
+  @media (max-width: 768px) {
+    .logo-wrapper {
+      display: none !important;
+    }
+    .hero-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .job-details {
+      width: 100%;
+      margin-left: 16px; /* 👈 adds left space for skill‑based opportunity and all text */
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-start;
+      margin-left: 16px; /* 👈 aligns buttons with the text */
+    }
+    .hero-actions button {
+      width: auto !important;
+      margin: 0 !important;
+    }
+    .eyebrow {
+      font-size: 11px !important;
+      text-align: left !important;
+    }
+    .pageTitle {
+      font-size: 28px !important;
+      text-align: left !important;
+    }
+    .pageSubtitle {
+      font-size: 14px !important;
+      text-align: left !important;
+    }
+    .metaPills {
+      justify-content: flex-start !important;
+      gap: 6px !important;
+    }
+    .metaPills span {
+      font-size: 11px !important;
+      padding: 4px 8px !important;
+    }
+    .layoutGrid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  @media (min-width: 769px) {
+    .hero-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+    }
+    .hero-left {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .logo-wrapper {
+      flex-shrink: 0;
+    }
+    .job-details {
+      flex: 1;
+      margin-left: 20px;
+    }
+    .eyebrow {
+      margin-top: 0;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+  }
+`}</style>
     </div>
   );
 }
-
-// ... (all helper functions and styles remain the same as in your original file)
-// I'll keep the rest identical to your original to avoid accidental changes.
-// The only additions are the email button and the global style above.
-
-// Note: The styles below are unchanged from your original file – I'm repeating them for completeness.
 
 function SectionHeader({
   title,
@@ -810,28 +941,9 @@ const heroCard: CSSProperties = {
   borderRadius: 30,
   overflow: "hidden",
   marginBottom: 18,
-  boxShadow: "0 22px 60px rgba(2,6,23,0.18)",
+  boxShadow: "0 22px 60px rgba(2,6,23,0.08)",
   backgroundSize: "cover",
   backgroundPosition: "center",
-};
-
-const heroTop: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 18,
-  flexWrap: "wrap",
-  padding: 24,
-  background: "rgba(2, 6, 23, 0.28)",
-  backdropFilter: "blur(10px)",
-};
-
-const brandBlock: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 16,
-  minWidth: 360,
-  flex: 1,
 };
 
 const brandLogo: CSSProperties = {
@@ -839,9 +951,9 @@ const brandLogo: CSSProperties = {
   height: 74,
   borderRadius: 22,
   overflow: "hidden",
-  background: "rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.9)",
   flexShrink: 0,
-  boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
+  boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
 };
 
 const brandLogoImg: CSSProperties = {
@@ -856,15 +968,15 @@ const brandFallback: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "white",
+  color: "#0f172a",
   fontSize: 28,
   fontWeight: 900,
-  background: "linear-gradient(135deg, #475569, #0f172a)",
+  background: "linear-gradient(135deg, #e2e8f0, #f8fafc)",
 };
 
 const eyebrow: CSSProperties = {
   margin: 0,
-  color: "#93c5fd",
+  color: "#2563eb",
   textTransform: "uppercase",
   letterSpacing: "0.12em",
   fontSize: 12,
@@ -874,7 +986,7 @@ const eyebrow: CSSProperties = {
 const pageTitle: CSSProperties = {
   margin: "8px 0 0",
   fontSize: 38,
-  color: "white",
+  color: "#0f172a",
   fontWeight: 900,
   letterSpacing: "-0.04em",
   lineHeight: 1.1,
@@ -882,7 +994,7 @@ const pageTitle: CSSProperties = {
 
 const pageSubtitle: CSSProperties = {
   margin: "10px 0 0",
-  color: "#dbeafe",
+  color: "#475569",
   lineHeight: 1.7,
   maxWidth: 900,
 };
@@ -908,9 +1020,9 @@ const statusPill = (mode: "open" | "closed"): CSSProperties => ({
 });
 
 const metaChip: CSSProperties = {
-  background: "rgba(255,255,255,0.12)",
-  color: "white",
-  border: "1px solid rgba(255,255,255,0.16)",
+  background: "#f1f5f9",
+  color: "#0f172a",
+  border: "1px solid #e2e8f0",
   padding: "8px 12px",
   borderRadius: 999,
   fontSize: 12,
@@ -927,13 +1039,6 @@ const alreadyAppliedChip: CSSProperties = {
   fontWeight: 800,
 };
 
-const heroActions: CSSProperties = {
-  display: "flex",
-  gap: 10,
-  flexWrap: "wrap",
-  justifyContent: "flex-end",
-};
-
 const primaryBtn: CSSProperties = {
   background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
   color: "white",
@@ -946,9 +1051,9 @@ const primaryBtn: CSSProperties = {
 };
 
 const ghostBtn: CSSProperties = {
-  background: "rgba(255,255,255,0.12)",
-  color: "white",
-  border: "1px solid rgba(255,255,255,0.18)",
+  background: "rgba(255,255,255,0.9)",
+  color: "#0f172a",
+  border: "1px solid #e2e8f0",
   padding: "12px 16px",
   borderRadius: 14,
   cursor: "pointer",

@@ -27,6 +27,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Google Search Console verification */}
+        <meta 
+           name="google-site-verification"
+           content="qm2YrHvpcQ_F74UybKmfe7o45J8pmqKpgcwog4bJR-c"
+        />
         {GA_MEASUREMENT_ID && (
           <>
             <Script

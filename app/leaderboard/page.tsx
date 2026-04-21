@@ -16,29 +16,37 @@ type UserWithStats = {
   profile_completion: number;
 };
 
+type Badge = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string | null;
+  min_points: number;
+};
+
 export default function Leaderboard() {
   const [users, setUsers] = useState<UserWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [myPoints, setMyPoints] = useState<number | null>(null);
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [userBadgeIds, setUserBadgeIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadLeaderboard();
+    loadBadges();
   }, []);
 
   async function loadLeaderboard() {
-    // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     setCurrentUser(user);
 
-    // Fetch all developers (exclude companies)
     const { data: usersData } = await supabase
       .from("users")
       .select("*")
-      .eq("role", "developer"); // ← Only developers
+      .eq("role", "developer");
 
-    // Fetch projects count per user
     const { data: submissions } = await supabase
       .from("submissions")
       .select("user_id");
@@ -48,12 +56,10 @@ export default function Leaderboard() {
       projectsCountMap.set(sub.user_id, (projectsCountMap.get(sub.user_id) || 0) + 1);
     });
 
-    // Calculate stats for each user
     const ranked = usersData?.map((u: any) => {
       const projectsCount = projectsCountMap.get(u.id) || 0;
       const skillsCount = u.skills?.length || 0;
 
-      // Profile completion score (0-100)
       let completion = 0;
       if (u.full_name) completion += 20;
       if (u.bio) completion += 20;
@@ -62,7 +68,6 @@ export default function Leaderboard() {
       if (u.profession) completion += 20;
       completion = Math.min(100, completion);
 
-      // Points are already stored in total_points – we just use them
       const points = u.total_points || 0;
 
       return {
@@ -78,10 +83,8 @@ export default function Leaderboard() {
       };
     });
 
-    // Sort by total_points descending
     ranked?.sort((a, b) => b.total_points - a.total_points);
 
-    // Find logged-in user rank (fixed TypeScript error)
     let rankPosition = null;
     let userPoints = null;
     if (user && ranked && ranked.length > 0) {
@@ -97,6 +100,27 @@ export default function Leaderboard() {
     setLoading(false);
   }
 
+  async function loadBadges() {
+    const { data: badgesData } = await supabase
+      .from("badges")
+      .select("*")
+      .order("min_points", { ascending: true });
+
+    if (badgesData) setBadges(badgesData);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: userBadges } = await supabase
+        .from("user_badges")
+        .select("badge_id")
+        .eq("user_id", user.id);
+      if (userBadges) {
+        const earnedSet = new Set(userBadges.map(ub => ub.badge_id));
+        setUserBadgeIds(earnedSet);
+      }
+    }
+  }
+
   if (loading) {
     return <div style={styles.center}>Loading leaderboard...</div>;
   }
@@ -107,7 +131,62 @@ export default function Leaderboard() {
 
   return (
     <div style={styles.container}>
+      <style jsx>{`
+        /* Mobile: top 3 arrangement - 1st full width, 2nd+3rd side by side */
+        @media (max-width: 640px) {
+          .top-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 20px !important;
+          }
+          .top-grid .top-card:first-child {
+            width: 100% !important;
+          }
+          .top-grid .top-card:nth-child(2),
+          .top-grid .top-card:nth-child(3) {
+            width: calc(50% - 10px) !important;
+            display: inline-block !important;
+          }
+          .top-grid {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            justify-content: space-between !important;
+          }
+          .top-grid .top-card:first-child {
+            width: 100% !important;
+            margin-bottom: 10px;
+          }
+        }
+        /* Ensure table scrolls horizontally on mobile */
+        @media (max-width: 640px) {
+          .table-wrapper {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+          }
+          .leaderboard-table {
+            min-width: 500px;
+          }
+        }
+      `}</style>
+
       <h1 style={styles.title}>🏆 OfSkillJob Leaderboard</h1>
+
+      {/* Info Section */}
+      <div style={{ ...styles.rankCard, background: "#f0f9ff", borderLeft: "4px solid #2563eb" }}>
+        <h3 style={{ marginBottom: 8 }}>📊 About the Leaderboard</h3>
+        <p style={{ fontSize: 14, marginBottom: 12 }}>
+          Compete with fellow developers and earn points by being active on OfSkillJob.
+        </p>
+        <h4 style={{ fontWeight: 600, marginBottom: 6 }}>✨ How to earn points:</h4>
+        <ul style={{ fontSize: 13, lineHeight: 1.6, paddingLeft: 20 }}>
+          <li>📝 Sign up – <strong>20 pts</strong></li>
+          <li>✅ Complete profile – <strong>up to 50 pts</strong></li>
+          <li>📬 Apply to a job – <strong>10 pts each</strong></li>
+          <li>🏆 Submit a challenge – <strong>varies by difficulty</strong></li>
+          <li>🔥 Daily login streak – <strong>5 pts + bonus</strong></li>
+        </ul>
+      </div>
 
       {/* User rank card */}
       {myRank && (
@@ -122,12 +201,12 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {/* Top 3 */}
-      <div style={styles.topGrid}>
+      {/* Top 3 – original styling, mobile arrangement via CSS above */}
+      <div className="top-grid" style={styles.topGrid}>
         {top3.map((user, idx) => {
           const medals = ["🥇", "🥈", "🥉"];
           return (
-            <div key={user.id} style={styles.topCard}>
+            <div key={user.id} style={styles.topCard} className="top-card">
               <div style={styles.medal}>{medals[idx]}</div>
               <div style={styles.avatar}>
                 {user.avatar_url ? (
@@ -139,42 +218,82 @@ export default function Leaderboard() {
               <h3>{user.full_name || "Developer"}</h3>
               <p style={styles.username}>@{user.username}</p>
               <p>Points: <strong>{user.total_points}</strong></p>
-              <Link href={`/u/${user.username}`}>
-                <button style={styles.viewBtn}>View Profile</button>
-              </Link>
+              {/* View Profile button removed */}
             </div>
           );
         })}
       </div>
 
-      {/* Leaderboard table */}
+      {/* LEADERBOARD TABLE (now above badges) */}
       <div style={styles.tableCard}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeader}>
-              <th style={styles.th}>Rank</th>
-              <th style={styles.th}>Developer</th>
-              <th style={styles.th}>Projects</th>
-              <th style={styles.th}>Skills</th>
-              <th style={styles.th}>Points</th>
-            </tr>
-          </thead>
-          <tbody>
-            {others.map((user, idx) => (
-              <tr key={user.id} style={styles.tableRow}>
-                <td style={styles.td}>#{idx + 4}</td>
-                <td style={styles.td}>
-                  <Link href={`/u/${user.username}`} style={styles.link}>
-                    @{user.username}
-                  </Link>
-                </td>
-                <td style={styles.td}>{user.projects_count}</td>
-                <td style={styles.td}>{user.skills_count}</td>
-                <td style={{ ...styles.td, fontWeight: "bold" }}>{user.total_points}</td>
+        <div className="table-wrapper">
+          <table style={styles.table} className="leaderboard-table">
+            <thead>
+              <tr style={styles.tableHeader}>
+                <th style={styles.th}>Rank</th>
+                <th style={styles.th}>Developer</th>
+                <th style={styles.th}>Projects</th>
+                <th style={styles.th}>Skills</th>
+                <th style={styles.th}>Points</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {others.map((user, idx) => (
+                <tr key={user.id} style={styles.tableRow}>
+                  <td style={styles.td}>#{idx + 4}</td>
+                  <td style={styles.td}>
+                    <Link href={`/u/${user.username}`} style={styles.link}>
+                      @{user.username}
+                    </Link>
+                  </td>
+                  <td style={styles.td}>{user.projects_count}</td>
+                  <td style={styles.td}>{user.skills_count}</td>
+                  <td style={{ ...styles.td, fontWeight: "bold" }}>{user.total_points}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* BADGES SECTION (now below table) */}
+      <div style={{ ...styles.tableCard, marginTop: 40, padding: "20px" }}>
+        <h3 style={{ fontSize: 20, marginBottom: 8 }}>🎖️ Badges & Achievements</h3>
+        <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>
+          Earn badges by reaching point milestones. Unlock them all!
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
+          {badges.map((badge) => {
+            const earned = userBadgeIds.has(badge.id);
+            return (
+              <div
+                key={badge.id}
+                style={{
+                  background: earned ? "#f0fdf4" : "#f8fafc",
+                  border: `1px solid ${earned ? "#bbf7d0" : "#e2e8f0"}`,
+                  borderRadius: 12,
+                  padding: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <span style={{ fontSize: 28 }}>{badge.icon || "🏅"}</span>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{badge.name}</div>
+                  <div style={{ fontSize: 12, color: "#475569" }}>{badge.description}</div>
+                  <div style={{ fontSize: 11, marginTop: 4 }}>
+                    {earned ? (
+                      <span style={{ color: "#16a34a" }}>✓ Earned</span>
+                    ) : (
+                      <span>Requires {badge.min_points} points</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -239,15 +358,6 @@ const styles = {
   },
   username: {
     color: "#64748b",
-  },
-  viewBtn: {
-    background: "#2563eb",
-    color: "white",
-    border: "none",
-    padding: "8px 14px",
-    borderRadius: "6px",
-    cursor: "pointer",
-    marginTop: "10px",
   },
   tableCard: {
     background: "white",

@@ -111,56 +111,32 @@ function ApplicationsByIdInner() {
     setLoading(false);
   }
 
-  const getStatusMessage = (status: string, isShortlisted: boolean, isRejected: boolean) => {
-    if (isShortlisted) {
-      return {
-        title: "🎉 Congratulations! You've been shortlisted.",
-        body: "The company is impressed with your skills. Expect further communication regarding next steps (interview, test, or call).",
-        color: "text-green-700",
-        bg: "bg-green-50",
-        border: "border-green-200"
-      };
-    }
-    if (isRejected) {
-      return {
-        title: "💔 Not selected this time.",
-        body: "We know this isn't easy, but every rejection is a redirection. Keep improving your skills – the right opportunity is waiting for you.",
-        color: "text-red-700",
-        bg: "bg-red-50",
-        border: "border-red-200"
-      };
-    }
-    if (status === "reviewed") {
-      return {
-        title: "📋 Your application has been reviewed.",
-        body: "The recruiter has evaluated your profile. You're still in consideration – a decision is coming soon.",
-        color: "text-purple-700",
-        bg: "bg-purple-50",
-        border: "border-purple-200"
-      };
-    }
-    return {
-      title: "⏳ Application submitted successfully!",
-      body: "Your application is now with the company. They will review your skills and task submission. We'll notify you as soon as there's an update.",
-      color: "text-yellow-700",
-      bg: "bg-yellow-50",
-      border: "border-yellow-200"
-    };
-  };
-
   const formatDate = (date: string) => new Date(date).toLocaleString();
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "shortlisted":
+        return { label: "⭐ Shortlisted", bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" };
+      case "reviewed":
+        return { label: "📋 Reviewed", bg: "#faf5ff", text: "#6b21a5", border: "#e9d5ff" };
+      case "rejected":
+        return { label: "❌ Rejected", bg: "#fef2f2", text: "#991b1b", border: "#fecaca" };
+      default:
+        return { label: "⏳ Submitted", bg: "#fefce8", text: "#854d0e", border: "#fef08a" };
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div style={{ padding: 60, textAlign: "center" }}>
+        Loading applications…
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-20 text-red-600">
+      <div style={{ padding: 60, textAlign: "center", color: "#ef4444" }}>
         <p>{error}</p>
       </div>
     );
@@ -170,295 +146,403 @@ function ApplicationsByIdInner() {
   const reviewedApps = applications.filter(a => a.status === "reviewed").length;
   const shortlistedApps = applications.filter(a => a.status === "shortlisted").length;
 
+  const containerStyle = {
+    maxWidth: 1120,
+    margin: "0 auto",
+    padding: 20,
+    fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto",
+    background: "#f8fafc",
+    minHeight: "100vh",
+  };
+
+  const cardStyle = {
+    background: "white",
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: "0 10px 30px rgba(2,6,23,0.06)",
+    transition: "background 0.2s ease",
+  };
+
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 font-sans">
-      {/* Header with stats */}
-      <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl shadow-xl p-6 mb-8 text-white">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div style={containerStyle}>
+      <style>{`
+        @media (max-width: 640px) {
+          .stats-grid-mobile {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 12px !important;
+          }
+        }
+      `}</style>
+
+      {/* Hero Banner */}
+      <div
+        style={{
+          background: "linear-gradient(135deg, #eef2ff, #f8fafc, #e0f2fe)",
+          borderRadius: 20,
+          padding: 24,
+          marginBottom: 24,
+          boxShadow: "0 18px 45px rgba(2,6,23,0.08)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">📬 Application Tracker</h1>
-            <p className="text-blue-100 mt-1 text-sm">Real‑time updates on every job you've applied for</p>
+            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: "#0f172a" }}>📬 Application Tracker</h1>
+            <p style={{ color: "#475569", marginTop: 6 }}>Real‑time status of every job you've applied for</p>
           </div>
-          <button
-            onClick={loadApplications}
-            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2 rounded-xl text-sm font-medium transition"
-          >
-            🔄 Refresh
-          </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-          <div className="bg-white/10 rounded-xl p-3 text-center">
-            <div className="text-2xl font-bold">{totalApps}</div>
-            <div className="text-sm text-blue-100">Total Applications</div>
+
+        {/* Stats Grid - now 2x2 on mobile */}
+        <div
+          className="stats-grid-mobile"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: 16,
+            marginTop: 24,
+          }}
+        >
+          <div style={{ background: "white", borderRadius: 16, padding: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#2563eb" }}>{totalApps}</div>
+            <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Total Applications</div>
           </div>
-          <div className="bg-white/10 rounded-xl p-3 text-center">
-            <div className="text-2xl font-bold">{reviewedApps}</div>
-            <div className="text-sm text-blue-100">Reviewed</div>
+          <div style={{ background: "white", borderRadius: 16, padding: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#9333ea" }}>{reviewedApps}</div>
+            <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Reviewed</div>
           </div>
-          <div className="bg-white/10 rounded-xl p-3 text-center">
-            <div className="text-2xl font-bold">{shortlistedApps}</div>
-            <div className="text-sm text-blue-100">Shortlisted</div>
+          <div style={{ background: "white", borderRadius: 16, padding: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#16a34a" }}>{shortlistedApps}</div>
+            <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Shortlisted</div>
           </div>
         </div>
       </div>
 
+      {/* Applications List (unchanged) */}
       {applications.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-          <div className="text-gray-400 text-5xl mb-4">📭</div>
-          <h3 className="text-xl font-semibold text-gray-700">No applications yet</h3>
-          <p className="text-gray-500 mt-2">You haven't applied to any jobs. Start exploring!</p>
-          <button
-            onClick={() => router.push("/jobs")}
-            className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition"
-          >
-            Browse Jobs
-          </button>
+        <div style={cardStyle}>
+          <div style={{ textAlign: "center", padding: 40 }}>
+            <div style={{ fontSize: 64, marginBottom: 16 }}>📭</div>
+            <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>No applications yet</h3>
+            <p style={{ color: "#64748b", marginBottom: 24 }}>You haven't applied to any jobs. Start exploring!</p>
+            <button
+              onClick={() => router.push("/jobs")}
+              style={{
+                background: "#2563eb",
+                color: "white",
+                padding: "10px 20px",
+                borderRadius: 12,
+                border: "none",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Browse Jobs
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
           {applications.map((app) => {
+            const statusConfig = getStatusConfig(app.status);
             const isRejected = app.status === "rejected";
             const isShortlisted = app.status === "shortlisted";
-            const statusMsg = getStatusMessage(app.status, isShortlisted, isRejected);
-            
-            // Determine step completion for horizontal timeline
-            const steps = ["Submitted", "Reviewed", "Decision"];
-            let currentStep = 0;
-            if (app.status === "reviewed") currentStep = 1;
-            if (isShortlisted || isRejected) currentStep = 2;
+            const isReviewed = app.status === "reviewed";
+
+            const steps = [
+              { name: "Submitted", completed: true, date: app.created_at },
+              { name: "Reviewed", completed: isReviewed || isShortlisted || isRejected, date: app.profile_viewed_at || null },
+              { name: "Decision", completed: isShortlisted || isRejected, date: null },
+            ];
 
             return (
-              <div key={app.id} className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden transition-all hover:shadow-lg">
-                {/* Header with company info */}
-                <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                  <div className="flex flex-wrap justify-between items-start gap-4">
-                    <div className="flex items-center gap-4">
-                      {app.job?.company?.logo_url ? (
-                        <img
-                          src={app.job.company.logo_url}
-                          alt="Logo"
-                          className="w-12 h-12 rounded-full object-cover border shadow-sm"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl">
-                          {app.job?.company?.company_name?.charAt(0) || "C"}
-                        </div>
-                      )}
-                      <div>
-                        <h2 className="text-xl font-bold text-gray-800">{app.job?.title || "Unknown Job"}</h2>
-                        <p className="text-gray-500 text-sm">{app.job?.company?.company_name || "Unknown Company"}</p>
+              <div key={app.id} style={cardStyle}>
+                {/* Header */}
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 16 }}>
+                  <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                    {app.job?.company?.logo_url ? (
+                      <img
+                        src={app.job.company.logo_url}
+                        alt="Company logo"
+                        style={{ width: 56, height: 56, borderRadius: 12, objectFit: "cover", border: "1px solid #e2e8f0" }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: 12,
+                          background: "#eef2ff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 24,
+                          fontWeight: 700,
+                          color: "#2563eb",
+                        }}
+                      >
+                        {app.job?.company?.company_name?.charAt(0) || "C"}
                       </div>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-sm font-semibold ${statusMsg.bg} ${statusMsg.color} border ${statusMsg.border}`}>
-                      {app.status === "shortlisted" ? "⭐ Shortlisted" :
-                       app.status === "reviewed" ? "📋 Reviewed" :
-                       app.status === "rejected" ? "❌ Rejected" :
-                       "⏳ Submitted"}
+                    )}
+                    <div>
+                      <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "#0f172a" }}>
+                        {app.job?.title || "Unknown Job"}
+                      </h2>
+                      <p style={{ fontSize: 14, color: "#64748b", margin: "4px 0 0 0" }}>
+                        {app.job?.company?.company_name || "Unknown Company"}
+                      </p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">📅 Applied on {formatDate(app.created_at)}</p>
+                  <span
+                    style={{
+                      background: statusConfig.bg,
+                      color: statusConfig.text,
+                      border: `1px solid ${statusConfig.border}`,
+                      borderRadius: 40,
+                      padding: "6px 12px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {statusConfig.label}
+                  </span>
                 </div>
+                <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: 24 }}>Applied on {formatDate(app.created_at)}</p>
 
-                {/* Horizontal timeline */}
-                <div className="px-6 py-5 bg-gray-50 border-b border-gray-100">
-                  <div className="relative flex items-center justify-between">
-                    {steps.map((step, idx) => {
-                      let stepClass = "flex flex-col items-center relative z-10";
-                      let circleClass = "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all";
-                      let lineClass = "";
-                      let isActive = idx <= currentStep;
-                      
-                      if (isActive && idx === currentStep && !isRejected && !isShortlisted && app.status !== "reviewed") {
-                        circleClass += " bg-blue-500 text-white ring-4 ring-blue-200";
-                      } else if (isActive && idx === currentStep && app.status === "reviewed") {
-                        circleClass += " bg-purple-500 text-white ring-4 ring-purple-200";
-                      } else if (isActive && idx === currentStep && isShortlisted) {
-                        circleClass += " bg-green-500 text-white ring-4 ring-green-200";
-                      } else if (isActive && idx === currentStep && isRejected) {
-                        circleClass += " bg-red-500 text-white ring-4 ring-red-200";
-                      } else if (isActive && idx < currentStep) {
-                        circleClass += " bg-green-500 text-white";
-                      } else {
-                        circleClass += " bg-gray-300 text-gray-500";
-                      }
-                      
-                      if (idx < steps.length - 1) {
-                        lineClass = "absolute h-0.5 bg-gray-300 top-4 left-1/2 transform -translate-x-1/2";
-                        if (idx < currentStep) lineClass += " bg-green-500";
-                        else if (idx === currentStep && currentStep < 2 && !isRejected && !isShortlisted) lineClass += " bg-blue-300";
-                      }
-                      
-                      return (
-                        <div key={idx} className="flex-1 relative">
-                          <div className={stepClass}>
-                            <div className={circleClass}>
-                              {idx < currentStep ? "✓" : idx + 1}
-                            </div>
-                            <div className="mt-2 text-xs font-medium text-gray-600">{step}</div>
+                {/* Progress Timeline */}
+                <div style={{ background: "#f8fafc", borderRadius: 16, padding: 20, marginBottom: 24 }}>
+                  <h3 style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#64748b", marginBottom: 16 }}>
+                    Application Progress
+                  </h3>
+                  <div style={{ position: "relative" }}>
+                    {steps.map((step, idx) => (
+                      <div key={step.name} style={{ display: "flex", gap: 16, marginBottom: idx === steps.length - 1 ? 0 : 24 }}>
+                        <div style={{ position: "relative" }}>
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: "50%",
+                              background: step.completed
+                                ? idx === 2 && isShortlisted
+                                  ? "#16a34a"
+                                  : idx === 2 && isRejected
+                                  ? "#ef4444"
+                                  : "#16a34a"
+                                : "#e2e8f0",
+                              color: step.completed ? "white" : "#94a3b8",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 700,
+                              fontSize: 14,
+                            }}
+                          >
+                            {step.completed ? "✓" : idx + 1}
                           </div>
                           {idx < steps.length - 1 && (
-                            <div className={`${lineClass} w-[calc(100%-2rem)] left-1/2 -translate-x-1/2`} style={{ width: "calc(100% - 2rem)" }}></div>
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 32,
+                                left: 15,
+                                width: 2,
+                                height: 40,
+                                background: step.completed && steps[idx + 1].completed ? "#86efac" : "#e2e8f0",
+                              }}
+                            />
                           )}
                         </div>
-                      );
-                    })}
+                        <div>
+                          <p style={{ fontWeight: 600, color: step.completed ? "#0f172a" : "#94a3b8", margin: 0 }}>
+                            {step.name}
+                          </p>
+                          {step.date && (
+                            <p style={{ fontSize: 12, color: "#64748b", margin: "4px 0 0 0" }}>
+                              {formatDate(step.date)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-xs text-center text-gray-500 mt-4">
-                    {currentStep === 0 && "⏳ Your application is in the queue. The recruiter will review it soon."}
-                    {currentStep === 1 && "📖 Your application has been reviewed. A decision is coming."}
-                    {currentStep === 2 && isShortlisted && "🎉 Shortlisted! Next steps will be communicated."}
-                    {currentStep === 2 && isRejected && "😔 Not selected. Don't give up – keep applying!"}
-                  </p>
                 </div>
 
-                {/* Status message card */}
-                <div className={`mx-6 mt-4 p-4 rounded-xl ${statusMsg.bg} border ${statusMsg.border}`}>
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">{statusMsg.title.split(" ")[0]}</span>
+                {/* Status Message */}
+                <div
+                  style={{
+                    background: isShortlisted ? "#f0fdf4" : isRejected ? "#fef2f2" : isReviewed ? "#faf5ff" : "#fefce8",
+                    border: `1px solid ${
+                      isShortlisted ? "#bbf7d0" : isRejected ? "#fecaca" : isReviewed ? "#e9d5ff" : "#fef08a"
+                    }`,
+                    borderRadius: 16,
+                    padding: 16,
+                    marginBottom: 24,
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <span style={{ fontSize: 24 }}>
+                      {isShortlisted ? "🎉" : isRejected ? "💔" : isReviewed ? "📋" : "⏳"}
+                    </span>
                     <div>
-                      <h4 className={`font-bold ${statusMsg.color}`}>{statusMsg.title}</h4>
-                      <p className="text-sm text-gray-700 mt-1">{statusMsg.body}</p>
+                      <h4
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 16,
+                          margin: 0,
+                          color: isShortlisted ? "#166534" : isRejected ? "#991b1b" : isReviewed ? "#6b21a5" : "#854d0e",
+                        }}
+                      >
+                        {isShortlisted && "Congratulations! You've been shortlisted."}
+                        {isRejected && "Not selected this time."}
+                        {isReviewed && "Your application has been reviewed."}
+                        {!isShortlisted && !isRejected && !isReviewed && "Application submitted successfully!"}
+                      </h4>
+                      <p style={{ fontSize: 14, color: "#475569", marginTop: 6 }}>
+                        {isShortlisted && "The company is impressed with your skills. Expect further communication."}
+                        {isRejected && "Every rejection is a redirection. Keep improving – the right opportunity is waiting."}
+                        {isReviewed && "The recruiter has evaluated your profile. A decision is coming soon."}
+                        {!isShortlisted && !isRejected && !isReviewed &&
+                          "Your application is now with the company. We'll notify you as soon as there's an update."}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Activity timeline with connecting lines */}
-                <div className="p-6">
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-5 flex items-center gap-2">
-                    <span>📋</span> Activity timeline
+                {/* Activity Timeline */}
+                <div>
+                  <h3 style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#64748b", marginBottom: 16 }}>
+                    📋 Activity Timeline
                   </h3>
-                  <div className="relative pl-6 border-l-2 border-gray-200 ml-2 space-y-6">
-                    {/* Application submitted */}
-                    <div className="relative">
-                      <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-green-500 ring-4 ring-white"></div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-600 text-lg">✅</span>
-                          <p className="text-sm font-semibold text-gray-800">Application submitted</p>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{formatDate(app.created_at)}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", color: "#16a34a", fontSize: 16 }}>
+                        ✅
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 600, margin: 0 }}>Application submitted</p>
+                        <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{formatDate(app.created_at)}</p>
                       </div>
                     </div>
 
-                    {/* Profile viewed */}
                     {app.profile_viewed_at && (
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-blue-500 ring-4 ring-white"></div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-blue-600 text-lg">👁️</span>
-                            <p className="text-sm font-semibold text-gray-800">Profile viewed by company</p>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">{formatDate(app.profile_viewed_at)}</p>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", fontSize: 16 }}>
+                          👁️
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, margin: 0 }}>Profile viewed by company</p>
+                          <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{formatDate(app.profile_viewed_at)}</p>
                         </div>
                       </div>
                     )}
 
-                    {/* Drive opened */}
                     {app.drive_opened_at && (
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-indigo-500 ring-4 ring-white"></div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-indigo-600 text-lg">📂</span>
-                            <p className="text-sm font-semibold text-gray-800">Google Drive folder opened</p>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">{formatDate(app.drive_opened_at)}</p>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#e0e7ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#4f46e5", fontSize: 16 }}>
+                          📂
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, margin: 0 }}>Google Drive folder opened</p>
+                          <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{formatDate(app.drive_opened_at)}</p>
                         </div>
                       </div>
                     )}
 
-                    {/* Resume viewed */}
                     {app.resume_opened_at && (
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-purple-500 ring-4 ring-white"></div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-purple-600 text-lg">📄</span>
-                            <p className="text-sm font-semibold text-gray-800">Resume viewed/downloaded</p>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">{formatDate(app.resume_opened_at)}</p>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3e8ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#9333ea", fontSize: 16 }}>
+                          📄
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, margin: 0 }}>Resume viewed/downloaded</p>
+                          <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{formatDate(app.resume_opened_at)}</p>
                         </div>
                       </div>
                     )}
 
-                    {/* Application reviewed */}
                     {app.status === "reviewed" && (
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-purple-500 ring-4 ring-white"></div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-purple-600 text-lg">📋</span>
-                            <p className="text-sm font-semibold text-gray-800">Application reviewed</p>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">Status updated by company</p>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3e8ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#9333ea", fontSize: 16 }}>
+                          📋
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, margin: 0 }}>Application reviewed</p>
+                          <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Status updated by company</p>
                         </div>
                       </div>
                     )}
 
-                    {/* Shortlisted */}
                     {isShortlisted && (
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-green-600 ring-4 ring-white"></div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-green-600 text-lg">⭐</span>
-                            <p className="text-sm font-semibold text-gray-800">Shortlisted!</p>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">Congratulations! Next steps coming soon.</p>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", color: "#16a34a", fontSize: 16 }}>
+                          ⭐
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, margin: 0 }}>Shortlisted!</p>
+                          <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Congratulations! Next steps coming soon.</p>
                         </div>
                       </div>
                     )}
 
-                    {/* Rejected */}
                     {isRejected && (
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-red-500 ring-4 ring-white"></div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-red-600 text-lg">❌</span>
-                            <p className="text-sm font-semibold text-gray-800">Not selected</p>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">The company has moved forward with other candidates.</p>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", color: "#dc2626", fontSize: 16 }}>
+                          ❌
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, margin: 0 }}>Not selected</p>
+                          <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>The company has moved forward with other candidates.</p>
                         </div>
                       </div>
                     )}
 
-                    {/* Communication from company */}
                     {app.last_communication_at && (
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-orange-500 ring-4 ring-white"></div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-orange-600 text-lg">📞</span>
-                            <p className="text-sm font-semibold text-gray-800">Company contacted you</p>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">{app.communication_note || "No details"}</p>
-                          <p className="text-xs text-gray-400 mt-1">{formatDate(app.last_communication_at)}</p>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center", color: "#ea580c", fontSize: 16 }}>
+                          📞
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, margin: 0 }}>Company contacted you</p>
+                          <p style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>{app.communication_note || "No details"}</p>
+                          <p style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{formatDate(app.last_communication_at)}</p>
                         </div>
                       </div>
                     )}
 
-                    {/* No activity yet */}
-                    {!app.profile_viewed_at && !app.drive_opened_at && !app.resume_opened_at && app.status !== "reviewed" && !isShortlisted && !isRejected && (
-                      <div className="relative opacity-60">
-                        <div className="absolute -left-[29px] top-1 w-4 h-4 rounded-full bg-gray-300 ring-4 ring-white"></div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 text-lg">⏳</span>
-                            <p className="text-sm text-gray-500">Awaiting company action</p>
+                    {!app.profile_viewed_at &&
+                      !app.drive_opened_at &&
+                      !app.resume_opened_at &&
+                      app.status !== "reviewed" &&
+                      !isShortlisted &&
+                      !isRejected && (
+                        <div style={{ display: "flex", gap: 12, opacity: 0.7 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 16 }}>
+                            ⏳
                           </div>
-                          <p className="text-xs text-gray-400 mt-1">The recruiter will review your application soon</p>
+                          <div>
+                            <p style={{ fontWeight: 600, margin: 0, color: "#475569" }}>Awaiting company action</p>
+                            <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>The recruiter will review your application soon</p>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 </div>
 
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+                {/* Footer */}
+                <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
                   <button
                     onClick={() => router.push(`/jobs/${app.job?.slug}`)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium transition flex items-center gap-1"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#2563eb",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 14,
+                    }}
                   >
                     View job details <span>→</span>
                   </button>
