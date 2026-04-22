@@ -1,6 +1,7 @@
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import Script from "next/script";
+import Link from "next/link";
 
 export const metadata = {
   title: "OfSkillJob",
@@ -10,7 +11,6 @@ export const metadata = {
   },
 };
 
-// ✅ Move viewport to a separate export
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -27,10 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Google Search Console verification */}
-        <meta 
-           name="google-site-verification"
-           content="qm2YrHvpcQ_F74UybKmfe7o45J8pmqKpgcwog4bJR-c"
+        <meta
+          name="google-site-verification"
+          content="qm2YrHvpcQ_F74UybKmfe7o45J8pmqKpgcwog4bJR-c"
         />
         {GA_MEASUREMENT_ID && (
           <>
@@ -54,16 +53,52 @@ export default function RootLayout({
         <main style={{ minHeight: "80vh", padding: "20px" }}>{children}</main>
         <footer
           style={{
-            textAlign: "center",
-            padding: "25px",
             background: "#0f172a",
             color: "#cbd5e1",
+            padding: "20px 16px",
             marginTop: "40px",
+            textAlign: "center",
           }}
         >
-          © 2026 OfSkillJob - Show Skills. Get Hired.
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: "24px",
+              marginBottom: "16px",
+            }}
+          >
+            <Link href="/about" style={footerLinkStyle}>About</Link>
+            <Link href="/contact" style={footerLinkStyle}>Contact</Link>
+            <Link href="/privacy" style={footerLinkStyle}>Privacy</Link>
+            <Link href="/terms" style={footerLinkStyle}>Terms</Link>
+          </div>
+          <div
+            style={{
+              fontSize: "12px",
+              color: "#94a3b8",
+              display: "flex",
+              justifyContent: "center",
+              gap: "16px",
+              flexWrap: "wrap",
+            }}
+          >
+            <span>© 2026 OfSkillJob – Show Skills. Get Hired.</span>
+            <a href="mailto:ofskilljobs@gmail.com" style={footerLinkStyle}>
+              ofskilljobs@gmail.com
+            </a>
+          </div>
         </footer>
       </body>
     </html>
   );
 }
+
+const footerLinkStyle: React.CSSProperties = {
+  color: "#cbd5e1",
+  textDecoration: "none",
+  fontSize: "13px",
+  transition: "color 0.2s",
+  cursor: "pointer",
+};
