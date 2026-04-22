@@ -230,18 +230,16 @@ export default function CompanyPublicProfile() {
     );
   }
 
-  // Define logic for hiring display
   const isCurrentlyHiring = profile.is_hiring === true;
 
   return (
     <div style={container}>
       <div style={heroWrap}>
+        {/* Removed cover_url background – now only gradient */}
         <div
           style={{
             ...heroBanner,
-            backgroundImage: profile.cover_url
-              ? `linear-gradient(180deg, rgba(15,23,42,0.10), rgba(15,23,42,0.72)), url("${profile.cover_url}")`
-              : "linear-gradient(135deg, #eef2ff, #f8fafc, #e0f2fe)",
+            background: "linear-gradient(135deg, #eef2ff, #f8fafc, #e0f2fe)",
           }}
         >
           <div style={heroTopRow}>
@@ -253,7 +251,7 @@ export default function CompanyPublicProfile() {
               )}
             </div>
 
-            <div style={heroActions}>
+            <div style={heroActions} className="hero-actions">
               <button onClick={handleShare} style={secondaryBtn}>Share Profile</button>
               {isOwner && (
                 <button onClick={() => router.push("/company/profile/edit")} style={editBtn}>
@@ -272,7 +270,6 @@ export default function CompanyPublicProfile() {
             <div style={titleRow}>
               <h1 style={companyNameStyle}>{companyName}</h1>
               {profile.is_verified && <span style={verifiedBadge}>Verified</span>}
-              {/* UPDATED: Hiring badge logic */}
               {isCurrentlyHiring && <span style={hiringBadge}>Hiring Now</span>}
             </div>
 
@@ -288,7 +285,8 @@ export default function CompanyPublicProfile() {
               {profile.about || "This company profile has not been completed yet."}
             </p>
 
-            <div style={heroButtons}>
+            {/* Contact & Copy Link buttons – now in a separate row that becomes 2 columns on mobile */}
+            <div style={heroButtons} className="contact-copy-row">
               {profile.email && <a href={`mailto:${profile.email}`} style={ghostBtn}>Contact</a>}
               <button onClick={handleShare} style={ghostBtn}>Copy Link</button>
             </div>
@@ -366,7 +364,6 @@ export default function CompanyPublicProfile() {
             <SectionHeader title="Related Information" subtitle="Verification and status" />
             <div style={{ display: "grid", gap: 6 }}>
               <DetailRow label="Status" value={profile.is_verified ? "Verified Enterprise" : "Standard Profile"} />
-              {/* UPDATED: Hiring detail logic */}
               <DetailRow label="Hiring" value={isCurrentlyHiring ? "Actively Recruiting" : "Not Hiring"} />
               <DetailRow label="Last Update" value={new Date().toLocaleDateString()} />
             </div>
@@ -384,6 +381,35 @@ export default function CompanyPublicProfile() {
       </footer>
 
       {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
+
+      {/* Mobile-specific overrides */}
+      <style>{`
+        @media (max-width: 768px) {
+          .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+          .hero-actions button,
+          .hero-actions a {
+            flex: 1 1 auto;
+            min-width: calc(33% - 8px);
+            text-align: center;
+            justify-content: center;
+          }
+          .contact-copy-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+          .contact-copy-row a,
+          .contact-copy-row button {
+            margin: 0;
+            text-align: center;
+            justify-content: center;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -406,7 +432,7 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-// Styling (Kept exactly as original)
+// Styling (unchanged except hero banner)
 const container: React.CSSProperties = { maxWidth: 1120, margin: "0 auto", padding: 20, fontFamily: "Inter, system-ui, sans-serif" };
 const heroWrap: React.CSSProperties = { marginBottom: 18 };
 const heroBanner: React.CSSProperties = { borderRadius: 20, overflow: "hidden", minHeight: 340, backgroundSize: "cover", backgroundPosition: "center", boxShadow: "0 18px 45px rgba(2, 6, 23, 0.12)", padding: 22, display: "flex", flexDirection: "column", justifyContent: "space-between" };
@@ -425,10 +451,10 @@ const metaBold: React.CSSProperties = { fontWeight: 800, color: "#0f172a" };
 const metaDot: React.CSSProperties = { color: "#94a3b8" };
 const subText: React.CSSProperties = { marginTop: 14, marginBottom: 0, color: "#334155", lineHeight: 1.75, maxWidth: 900 };
 const heroButtons: React.CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 };
-const primaryBtn: React.CSSProperties = { background: "#2563eb", color: "white", padding: "10px 14px", borderRadius: 12, textDecoration: "none", fontWeight: 700, cursor: "pointer" };
-const secondaryBtn: React.CSSProperties = { background: "rgba(255,255,255,0.92)", color: "#0f172a", padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(15,23,42,0.08)", cursor: "pointer", fontWeight: 700 };
-const editBtn: React.CSSProperties = { background: "#0f172a", color: "white", padding: "10px 14px", borderRadius: 12, cursor: "pointer", fontWeight: 700 };
-const ghostBtn: React.CSSProperties = { background: "rgba(255,255,255,0.82)", color: "#0f172a", padding: "10px 14px", borderRadius: 12, textDecoration: "none", border: "1px solid rgba(15,23,42,0.08)", cursor: "pointer", fontWeight: 700 };
+const primaryBtn: React.CSSProperties = { background: "#2563eb", color: "white", padding: "10px 14px", borderRadius: 12, textDecoration: "none", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" };
+const secondaryBtn: React.CSSProperties = { background: "rgba(255,255,255,0.92)", color: "#0f172a", padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(15,23,42,0.08)", cursor: "pointer", fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center" };
+const editBtn: React.CSSProperties = { background: "#0f172a", color: "white", padding: "10px 14px", borderRadius: 12, cursor: "pointer", fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center" };
+const ghostBtn: React.CSSProperties = { background: "rgba(255,255,255,0.82)", color: "#0f172a", padding: "10px 14px", borderRadius: 12, textDecoration: "none", border: "1px solid rgba(15,23,42,0.08)", cursor: "pointer", fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center" };
 const statsGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 18 };
 const statCard: React.CSSProperties = { background: "white", borderRadius: 16, padding: 16, boxShadow: "0 10px 30px rgba(2,6,23,0.06)" };
 const statValue: React.CSSProperties = { fontSize: 18, fontWeight: 800, color: "#0f172a" };

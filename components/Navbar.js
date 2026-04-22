@@ -47,6 +47,15 @@ export default function Navbar() {
     setLoading(false);
   }
 
+  // ✅ Reload user data when pathname changes (e.g., after redirect from edit page)
+  useEffect(() => {
+    async function refreshUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      await loadUser(user);
+    }
+    refreshUser();
+  }, [pathname]);
+
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -102,7 +111,15 @@ export default function Navbar() {
       return (
         <div className="desktop-menu">
           <button className={isActive("/") ? "active-btn" : "nav-btn"} onClick={() => router.push("/")}>Home</button>
-          <button className={isActive(`/company/${companyUsername || ""}`) ? "active-btn" : "nav-btn"} onClick={() => { if (companyUsername) router.push(`/company/${companyUsername}`); else router.push("/company/profile/edit"); }}>Profile</button>
+          <button 
+            className={isActive(`/company/${companyUsername || ""}`) ? "active-btn" : "nav-btn"} 
+            onClick={() => { 
+              if (companyUsername) router.push(`/company/${companyUsername}`); 
+              else router.push("/company/profile/edit"); 
+            }}
+          >
+            Profile
+          </button>
           <button className={isActive("/company/dashboard") ? "active-btn" : "nav-btn"} onClick={() => router.push("/company/dashboard")}>Dashboard</button>
           <button className="highlighted-btn" onClick={() => router.push("/company/jobs/new")}>Post Job</button>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
@@ -171,7 +188,16 @@ export default function Navbar() {
           <button onClick={() => { closeMenu(); router.push("/"); }} className="mobile-btn">Home</button>
           <button onClick={() => { closeMenu(); router.push("/company/dashboard"); }} className="mobile-btn">Dashboard</button>
           <button onClick={() => { closeMenu(); router.push("/company/jobs/new"); }} className="mobile-btn">Post Job</button>
-          <button onClick={() => { closeMenu(); if (companyUsername) router.push(`/company/${companyUsername}`); else router.push("/company/profile/edit"); }} className="mobile-btn">My Profile</button>
+          <button 
+            onClick={() => { 
+              closeMenu(); 
+              if (companyUsername) router.push(`/company/${companyUsername}`); 
+              else router.push("/company/profile/edit"); 
+            }} 
+            className="mobile-btn"
+          >
+            My Profile
+          </button>
           <button onClick={handleLogout} className="mobile-logout-btn">Logout</button>
         </>
       );

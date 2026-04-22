@@ -25,6 +25,7 @@ type Job = {
   expires_at: string | null;
   status: string | null;
   created_at: string | null;
+  external_apply_url: string | null;   // ✅ NEW
 };
 
 type Company = {
@@ -382,13 +383,15 @@ export default function JobDetailPage() {
     );
   }
 
+  // ✅ Determine if this job uses an external application link
+  const useExternalApply = !!job.external_apply_url?.trim();
+
   return (
     <div style={pageShell}>
       <div
         className="job-hero"
         style={{
           ...heroCard,
-          // Lighter gradient
           backgroundImage: company?.cover_url
             ? `linear-gradient(135deg, rgba(255,255,255,0.96), rgba(241,245,249,0.98)), url(${company.cover_url})`
             : "linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)",
@@ -580,7 +583,9 @@ export default function JobDetailPage() {
               <SectionHeader
                 title="Apply now"
                 subtitle={
-                  alreadyApplied
+                  useExternalApply
+                    ? "This job is curated by OfSkillJob. You will apply directly on the employer's website."
+                    : alreadyApplied
                     ? "You have already submitted an application for this job."
                     : authUser
                     ? "Your details can be auto-filled and your submission will go straight to the company."
@@ -588,7 +593,7 @@ export default function JobDetailPage() {
                 }
               />
 
-              {alreadyApplied && (
+              {alreadyApplied && !useExternalApply && (
                 <div style={alreadyAppliedBanner}>
                   <strong style={{ display: "block", marginBottom: 4 }}>
                     Already applied
@@ -600,7 +605,25 @@ export default function JobDetailPage() {
                 </div>
               )}
 
-              {authUser ? (
+              {/* ✅ External application link block */}
+              {useExternalApply ? (
+                <div style={guestBox}>
+                  <p style={guestText}>
+                    This job is hosted by <strong>{company?.company_name || "the employer"}</strong>.
+                    Click the button below to apply directly on their website.
+                  </p>
+                  <div style={guestActions}>
+                    <a
+                      href={job.external_apply_url!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}
+                    >
+                      Apply via OfSkillJob →
+                    </a>
+                  </div>
+                </div>
+              ) : authUser ? (
                 <form onSubmit={handleSubmit} style={formGrid}>
                   <Field label="Full name *">
                     <input

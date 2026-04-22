@@ -8,6 +8,7 @@ type ToastType = "success" | "error" | "info";
 
 type CompanyUser = {
   id: string;
+  email?: string;                         // ✅ NEW – added email
   role?: string | null;
   username?: string | null;
   company_name?: string | null;
@@ -28,6 +29,7 @@ type JobFormState = {
   task_instructions: string;
   task_type: string;
   expires_at: string;
+  external_apply_url: string;            // ✅ NEW – new field
 };
 
 type CreatedJob = {
@@ -50,6 +52,7 @@ const initialForm: JobFormState = {
   task_instructions: "",
   task_type: "custom",
   expires_at: "",
+  external_apply_url: "",                // ✅ NEW – default empty
 };
 
 const TASK_PRESETS: Record<
@@ -142,7 +145,7 @@ export default function NewCompanyJobPage() {
 
       const { data, error } = await supabase
         .from("users")
-        .select("id, role, username, company_name, industry, location")
+        .select("id, email, role, username, company_name, industry, location")   // ✅ NEW – added email
         .eq("id", user.id)
         .maybeSingle();
 
@@ -296,6 +299,7 @@ export default function NewCompanyJobPage() {
         task_type: form.task_required ? form.task_type : null,
         expires_at: expiresAt,
         status: "active",
+        external_apply_url: form.external_apply_url.trim() || null,   // ✅ NEW – add to payload
       };
 
       const { data, error } = await supabase
@@ -597,6 +601,24 @@ export default function NewCompanyJobPage() {
               style={input}
             />
           </Field>
+
+          {/* ✅ NEW – external URL field (visible only to admin) */}
+          {company?.email === "ofskilljobs@gmail.com" && (
+            <div style={{ marginBottom: 20 }}>
+              <Field label="External Application URL (admin only)">
+                <input
+                  type="url"
+                  value={form.external_apply_url}
+                  onChange={(e) => updateField("external_apply_url", e.target.value)}
+                  placeholder="https://example.com/careers/apply"
+                  style={input}
+                />
+                <p style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
+                  If filled, the "Apply" button on the job page will redirect to this URL instead of using the internal form.
+                </p>
+              </Field>
+            </div>
+          )}
 
           <div style={hintBox}>
             <strong>Good hiring flow:</strong> candidates apply with a Google Drive link,
