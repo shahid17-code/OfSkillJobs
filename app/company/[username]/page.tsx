@@ -71,6 +71,20 @@ export default function CompanyPublicProfile() {
   );
   const toastTimer = useRef<number | null>(null);
 
+  // State for "Read more" on company bio
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   useEffect(() => {
     loadProfile();
 
@@ -169,7 +183,6 @@ export default function CompanyPublicProfile() {
       setProfile({
         ...data,
         specialties: normalizeArray(data.specialties),
-        // Robust check for hiring status from database
         is_hiring: data.is_hiring === true || data.is_hiring === 'true' || data.is_hiring === 1
       });
     } catch (err) {
@@ -232,10 +245,19 @@ export default function CompanyPublicProfile() {
 
   const isCurrentlyHiring = profile.is_hiring === true;
 
+  // Helper for bio truncation
+  const fullBio = profile.about || "This company profile has not been completed yet.";
+  const getBioDisplay = () => {
+    if (!isMobile) return fullBio;
+    if (bioExpanded) return fullBio;
+    if (fullBio.length <= 100) return fullBio;
+    return fullBio.slice(0, 100) + "...";
+  };
+  const showReadMore = isMobile && fullBio.length > 100;
+
   return (
     <div style={container}>
       <div style={heroWrap}>
-        {/* Removed cover_url background – now only gradient */}
         <div
           style={{
             ...heroBanner,
@@ -281,11 +303,29 @@ export default function CompanyPublicProfile() {
               <span style={metaBold}>{profile.phone || "Phone not added"}</span>
             </div>
 
-            <p style={subText}>
-              {profile.about || "This company profile has not been completed yet."}
-            </p>
+            {/* Bio with Read more toggle */}
+            <div>
+              <p style={subText}>{getBioDisplay()}</p>
+              {showReadMore && (
+                <button
+                  onClick={() => setBioExpanded(!bioExpanded)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#2563eb",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginTop: 6,
+                    padding: 0,
+                    textDecoration: "underline",
+                  }}
+                >
+                  {bioExpanded ? "Read less" : "Read more"}
+                </button>
+              )}
+            </div>
 
-            {/* Contact & Copy Link buttons – now in a separate row that becomes 2 columns on mobile */}
             <div style={heroButtons} className="contact-copy-row">
               {profile.email && <a href={`mailto:${profile.email}`} style={ghostBtn}>Contact</a>}
               <button onClick={handleShare} style={ghostBtn}>Copy Link</button>
@@ -317,6 +357,7 @@ export default function CompanyPublicProfile() {
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <section style={card}>
             <SectionHeader title="About the Company" subtitle="Who they are and what they do" />
+            {/* Full bio already shown above, but keep this section too for consistency (no change) */}
             <p style={bodyText}>{profile.about || "No company description added yet."}</p>
           </section>
 
@@ -382,7 +423,6 @@ export default function CompanyPublicProfile() {
 
       {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
 
-      {/* Mobile-specific overrides */}
       <style>{`
         @media (max-width: 768px) {
           .hero-actions {
@@ -432,7 +472,7 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-// Styling (unchanged except hero banner)
+// All styles (unchanged from original)
 const container: React.CSSProperties = { maxWidth: 1120, margin: "0 auto", padding: 20, fontFamily: "Inter, system-ui, sans-serif" };
 const heroWrap: React.CSSProperties = { marginBottom: 18 };
 const heroBanner: React.CSSProperties = { borderRadius: 20, overflow: "hidden", minHeight: 340, backgroundSize: "cover", backgroundPosition: "center", boxShadow: "0 18px 45px rgba(2, 6, 23, 0.12)", padding: 22, display: "flex", flexDirection: "column", justifyContent: "space-between" };

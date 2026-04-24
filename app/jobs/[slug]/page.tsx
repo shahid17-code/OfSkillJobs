@@ -25,7 +25,7 @@ type Job = {
   expires_at: string | null;
   status: string | null;
   created_at: string | null;
-  external_apply_url: string | null;   // ✅ NEW
+  external_apply_url: string | null;
 };
 
 type Company = {
@@ -79,6 +79,18 @@ export default function JobDetailPage() {
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [authUser, setAuthUser] = useState<any>(null);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
+  // State for "Read more" on company bio
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     loadPage();
@@ -223,9 +235,7 @@ export default function JobDetailPage() {
     }
   }
 
-  function handleChange(
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
@@ -301,8 +311,6 @@ export default function JobDetailPage() {
         }
       }
 
-      console.log("✅ Submitting application with applicant_id:", applicantId);
-
       const { error } = await supabase.from("job_applications").insert({
         job_id: job.id,
         applicant_id: applicantId,
@@ -321,14 +329,12 @@ export default function JobDetailPage() {
           showToast("You have already applied for this job", "info");
           return;
         }
-
         console.error("Application submit error:", error);
         showToast(error.message || "Failed to submit application", "error");
         return;
       }
 
       await awardPoints(authUser.id, "job_apply", 10);
-
       showToast("Application submitted successfully! +10 points", "success");
       setAlreadyApplied(true);
       setForm(initialForm);
@@ -383,8 +389,19 @@ export default function JobDetailPage() {
     );
   }
 
-  // ✅ Determine if this job uses an external application link
   const useExternalApply = !!job.external_apply_url?.trim();
+
+  // Helper to truncate bio for mobile (if not expanded)
+  const getBioDisplay = () => {
+    const fullBio = company?.about || "This company profile has not been completed yet. Check back soon for more details.";
+    if (!isMobile) return fullBio;
+    if (bioExpanded) return fullBio;
+    if (fullBio.length <= 100) return fullBio;
+    return fullBio.slice(0, 100) + "...";
+  };
+
+  const bioToShow = getBioDisplay();
+  const showReadMore = isMobile && (company?.about?.length || 0) > 100;
 
   return (
     <div style={pageShell}>
@@ -534,10 +551,28 @@ export default function JobDetailPage() {
                     {company?.industry || "Industry not set"}
                     {company?.location ? ` • ${company.location}` : ""}
                   </p>
-                  <p style={companyBio}>
-                    {company?.about ||
-                      "This company profile has not been completed yet. Check back soon for more details."}
-                  </p>
+                  {/* ✅ Company bio with "Read more" on mobile */}
+                  <div>
+                    <p style={companyBio}>{bioToShow}</p>
+                    {showReadMore && (
+                      <button
+                        onClick={() => setBioExpanded(!bioExpanded)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#2563eb",
+                          cursor: "pointer",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          marginTop: 4,
+                          padding: 0,
+                          textDecoration: "underline",
+                        }}
+                      >
+                        {bioExpanded ? "Read less" : "Read more"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -605,7 +640,6 @@ export default function JobDetailPage() {
                 </div>
               )}
 
-              {/* ✅ External application link block */}
               {useExternalApply ? (
                 <div style={guestBox}>
                   <p style={guestText}>
@@ -761,14 +795,14 @@ export default function JobDetailPage() {
     }
     .job-details {
       width: 100%;
-      margin-left: 16px; /* 👈 adds left space for skill‑based opportunity and all text */
+      margin-left: 16px;
     }
     .hero-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       justify-content: flex-start;
-      margin-left: 16px; /* 👈 aligns buttons with the text */
+      margin-left: 16px;
     }
     .hero-actions button {
       width: auto !important;
@@ -844,14 +878,14 @@ export default function JobDetailPage() {
     }
     .job-details {
       width: 100%;
-      margin-left: 16px; /* 👈 adds left space for skill‑based opportunity and all text */
+      margin-left: 16px;
     }
     .hero-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       justify-content: flex-start;
-      margin-left: 16px; /* 👈 aligns buttons with the text */
+      margin-left: 16px;
     }
     .hero-actions button {
       width: auto !important;
