@@ -1,13 +1,29 @@
 User-agent: *
 Allow: /
-
-Disallow: /profile/edit
-Disallow: /company/profile/edit
-Disallow: /company/jobs/new
+Allow: /jobs$
+Allow: /jobs/*
+Allow: /challenges$
+Allow: /challenges/*
+Allow: /leaderboard$
+Allow: /about$
+Allow: /contact$
+Allow: /privacy$
+Allow: /terms$
+Allow: /u/ *
+Allow: /company/ *
+Disallow: /profile/edit/
+Disallow: /company/profile/edit/
+Disallow: /company/dashboard/
+Disallow: /company/jobs/new/
 Disallow: /company/jobs/edit/
 Disallow: /applications/
 Disallow: /api/
-Disallow: /auth/callback
+Disallow: /auth/
 Disallow: /submit/
+Disallow: /candidate/
+Disallow: /signup$
+Disallow: /login$
+Disallow: /forgot-password$
+Disallow: /reset-password$
 
 Sitemap: https://ofskilljobs.vercel.app/sitemap.xml
