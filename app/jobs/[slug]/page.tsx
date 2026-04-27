@@ -732,7 +732,7 @@ export default function JobDetailPage() {
                   <Field label="Resume link *">
                     <input
                       name="resume_link"
-                       value={form.resume_link}
+                      value={form.resume_link}
                       onChange={handleChange}
                       placeholder="Paste your resume / portfolio link"
                       style={input}
@@ -834,6 +834,12 @@ export default function JobDetailPage() {
       width: 100%;
       margin-left: 16px;
     }
+    /* ✅ Fix: ensure subtitle text wraps and doesn't get cut off */
+    .job-details .pageSubtitle {
+      word-break: break-word;
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
     .hero-actions {
       display: flex;
       flex-wrap: wrap;
@@ -856,6 +862,7 @@ export default function JobDetailPage() {
     .pageSubtitle {
       font-size: 14px !important;
       text-align: left !important;
+      word-break: break-word; /* additional safeguard */
     }
     .metaPills {
       justify-content: flex-start !important;
@@ -917,6 +924,12 @@ export default function JobDetailPage() {
       width: 100%;
       margin-left: 16px;
     }
+    /* ✅ Fix: ensure subtitle text wraps */
+    .job-details .pageSubtitle {
+      word-break: break-word;
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
     .hero-actions {
       display: flex;
       flex-wrap: wrap;
@@ -939,6 +952,7 @@ export default function JobDetailPage() {
     .pageSubtitle {
       font-size: 14px !important;
       text-align: left !important;
+      word-break: break-word;
     }
     .metaPills {
       justify-content: flex-start !important;
