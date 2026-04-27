@@ -82,6 +82,8 @@ export default function JobDetailPage() {
   // State for "Read more" on company bio
   const [bioExpanded, setBioExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  // New state for job description expansion
+  const [descExpanded, setDescExpanded] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -401,7 +403,22 @@ export default function JobDetailPage() {
   };
 
   const bioToShow = getBioDisplay();
-  const showReadMore = isMobile && (company?.about?.length || 0) > 100;
+  const showReadMoreBio = isMobile && (company?.about?.length || 0) > 100;
+
+  // Helper for job description truncation (mobile only)
+  const getDescriptionDisplay = () => {
+    const fullDesc = job.description || "";
+    if (!isMobile) return fullDesc;
+    if (descExpanded) return fullDesc;
+    if (fullDesc.length <= 300) return fullDesc;
+    // Find the last space within the first 300 chars to avoid breaking a word
+    const truncated = fullDesc.slice(0, 300);
+    const lastSpace = truncated.lastIndexOf(" ");
+    return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
+  };
+
+  const descToShow = getDescriptionDisplay();
+  const showReadMoreDesc = isMobile && (job.description?.length || 0) > 300;
 
   return (
     <div style={pageShell}>
@@ -483,7 +500,28 @@ export default function JobDetailPage() {
               title="About this role"
               subtitle="A clear view of what the company needs"
             />
-            <p style={bodyText}>{job.description}</p>
+            {/* Job description with preserved line breaks and read more toggle */}
+            <div>
+              <div style={{ ...bodyText, whiteSpace: "pre-wrap" }}>{descToShow}</div>
+              {showReadMoreDesc && (
+                <button
+                  onClick={() => setDescExpanded(!descExpanded)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#2563eb",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginTop: 8,
+                    padding: 0,
+                    textDecoration: "underline",
+                  }}
+                >
+                  {descExpanded ? "Read less" : "Read more"}
+                </button>
+              )}
+            </div>
 
             <div style={detailGrid}>
               <InfoBox label="Task-based hiring" value={job.task_required ? "Yes" : "No"} />
@@ -551,10 +589,9 @@ export default function JobDetailPage() {
                     {company?.industry || "Industry not set"}
                     {company?.location ? ` • ${company.location}` : ""}
                   </p>
-                  {/* ✅ Company bio with "Read more" on mobile */}
                   <div>
                     <p style={companyBio}>{bioToShow}</p>
-                    {showReadMore && (
+                    {showReadMoreBio && (
                       <button
                         onClick={() => setBioExpanded(!bioExpanded)}
                         style={{
@@ -695,7 +732,7 @@ export default function JobDetailPage() {
                   <Field label="Resume link *">
                     <input
                       name="resume_link"
-                      value={form.resume_link}
+                       value={form.resume_link}
                       onChange={handleChange}
                       placeholder="Paste your resume / portfolio link"
                       style={input}
@@ -987,6 +1024,7 @@ function Field({
   );
 }
 
+// All style definitions remain unchanged (kept as in original)
 const pageShell: CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",
