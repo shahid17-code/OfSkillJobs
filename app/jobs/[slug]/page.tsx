@@ -79,16 +79,19 @@ export default function JobDetailPage() {
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [authUser, setAuthUser] = useState<any>(null);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
-  // State for "Read more" on company bio
   const [bioExpanded, setBioExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  // New state for job description expansion
   const [descExpanded, setDescExpanded] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    if (job?.slug) {
+      setShareUrl(`${window.location.origin}/jobs/${job.slug}`);
+    }
+  }, [job?.slug]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -96,45 +99,32 @@ export default function JobDetailPage() {
 
   useEffect(() => {
     loadPage();
-
-    return () => {
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    };
+    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
   }, [slug]);
 
   function showToast(message: string, type: ToastType = "info", duration = 2800) {
     setToast({ message, type });
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), duration);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), duration);
   }
 
   async function loadPage() {
     try {
       setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       setAuthUser(user || null);
       setAlreadyApplied(false);
 
       if (user) {
-        const metaName =
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.user_metadata?.display_name ||
-          "";
-
-        setForm((prev) => ({
+        const metaName = user.user_metadata?.full_name || user.user_metadata?.name || "";
+        setForm(prev => ({
           ...prev,
           applicant_name: prev.applicant_name || metaName || "",
           applicant_email: prev.applicant_email || user.email || "",
         }));
       }
 
-      if (!slug) {
-        setJob(null);
-        return;
-      }
+      if (!slug) { setJob(null); return; }
 
       const { data: jobData, error: jobError } = await supabase
         .from("jobs")
@@ -142,49 +132,26 @@ export default function JobDetailPage() {
         .ilike("slug", slug)
         .maybeSingle();
 
-      if (jobError) {
-        console.error("Job load error:", jobError);
-        showToast("Failed to load job", "error");
-        setJob(null);
-        return;
-      }
-
-      if (!jobData) {
-        setJob(null);
-        return;
-      }
+      if (jobError || !jobData) { setJob(null); return; }
 
       setJob(jobData as Job);
 
-      const { data: companyData, error: companyError } = await supabase
+      const { data: companyData } = await supabase
         .from("users")
-        .select(
-          "company_name, username, industry, location, phone, email, logo_url, cover_url, about, website"
-        )
+        .select("company_name, username, industry, location, phone, email, logo_url, cover_url, about, website")
         .eq("id", jobData.company_id)
         .maybeSingle();
-
-      if (companyError) {
-        console.error("Company load error:", companyError);
-      }
 
       setCompany((companyData as Company) || null);
 
       if (user?.email) {
         const normalizedEmail = user.email.toLowerCase();
-        const { data: existingApplication, error: appCheckError } = await supabase
+        const { data: existingApplication } = await supabase
           .from("job_applications")
-          .select(
-            "id, applicant_name, applicant_email, applicant_phone, resume_link, drive_link, note"
-          )
+          .select("id, applicant_name, applicant_email, applicant_phone, resume_link, drive_link, note")
           .eq("job_id", jobData.id)
           .ilike("applicant_email", normalizedEmail)
-          .limit(1)
           .maybeSingle();
-
-        if (appCheckError) {
-          console.error("Application check error:", appCheckError);
-        }
 
         if (existingApplication) {
           setAlreadyApplied(true);
@@ -198,13 +165,8 @@ export default function JobDetailPage() {
           });
         }
       }
-    } catch (err) {
-      console.error("Unexpected job page error:", err);
-      setJob(null);
-      showToast("Something went wrong while loading this job", "error");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); showToast("Something went wrong", "error"); }
+    finally { setLoading(false); }
   }
 
   const expired = useMemo(() => {
@@ -222,133 +184,56 @@ export default function JobDetailPage() {
     return `${min} - ${max}`;
   }, [job]);
 
-  const shareUrl = useMemo(() => {
-    if (typeof window === "undefined" || !job?.slug) return "";
-    return `${window.location.origin}/jobs/${job.slug}`;
-  }, [job?.slug]);
-
   async function copyText(text: string, message: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast(message, "success");
-    } catch (err) {
-      console.error("Copy failed:", err);
-      showToast("Failed to copy", "error");
-    }
+    try { await navigator.clipboard.writeText(text); showToast(message, "success"); }
+    catch { showToast("Failed to copy", "error"); }
   }
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!job) {
-      showToast("Job not found", "error");
-      return;
-    }
+    if (!job || expired) return showToast(expired ? "Job closed" : "Job not found", "error");
+    if (alreadyApplied) return showToast("Already applied", "info");
+    if (!authUser) return showToast("Please sign up or log in", "info") && router.push("/signup");
 
-    if (expired) {
-      showToast("This job is closed", "error");
-      return;
-    }
+    const { applicant_name, applicant_email, resume_link, drive_link, applicant_phone, note } = form;
+    if (!applicant_name || !applicant_email || !resume_link || !drive_link)
+      return showToast("Name, email, resume link, and Drive link required", "error");
 
-    if (alreadyApplied) {
-      showToast("You have already applied for this job", "info");
-      return;
-    }
-
-    if (!authUser) {
-      showToast("Please sign up or log in to apply", "info");
-      router.push("/signup");
-      return;
-    }
-
-    const applicantName = form.applicant_name.trim();
-    const applicantEmail = form.applicant_email.trim();
-    const resumeLink = form.resume_link.trim();
-    const driveLink = form.drive_link.trim();
-    const applicantPhone = form.applicant_phone.trim();
-    const note = form.note.trim();
-
-    if (!applicantName || !applicantEmail || !resumeLink || !driveLink) {
-      showToast("Name, email, resume link, and Google Drive link are required", "error");
-      return;
-    }
-
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-
-      const normalizedEmail = applicantEmail.toLowerCase();
-      const { data: duplicateApp, error: duplicateCheckError } = await supabase
+      const normalizedEmail = applicant_email.toLowerCase();
+      const { data: duplicate } = await supabase
         .from("job_applications")
         .select("id")
         .eq("job_id", job.id)
         .ilike("applicant_email", normalizedEmail)
-        .limit(1)
         .maybeSingle();
-
-      if (duplicateApp) {
-        setAlreadyApplied(true);
-        showToast("You have already applied for this job", "info");
-        return;
-      }
+      if (duplicate) { setAlreadyApplied(true); showToast("Already applied", "info"); return; }
 
       let applicantId = authUser.id;
       if (!applicantId) {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("id")
-          .ilike("email", normalizedEmail)
-          .maybeSingle();
-        if (userData?.id) {
-          applicantId = userData.id;
-        } else {
-          showToast("Your account could not be identified. Please log out and log in again.", "error");
-          return;
-        }
+        const { data: userData } = await supabase.from("users").select("id").ilike("email", normalizedEmail).maybeSingle();
+        if (!userData?.id) throw new Error("User not found");
+        applicantId = userData.id;
       }
 
       const { error } = await supabase.from("job_applications").insert({
-        job_id: job.id,
-        applicant_id: applicantId,
-        applicant_name: applicantName,
-        applicant_email: normalizedEmail,
-        applicant_phone: applicantPhone || null,
-        resume_link: resumeLink,
-        drive_link: driveLink,
-        note: note || null,
-        status: "submitted",
+        job_id: job.id, applicant_id: applicantId, applicant_name, applicant_email: normalizedEmail,
+        applicant_phone: applicant_phone || null, resume_link, drive_link, note: note || null, status: "submitted",
       });
-
-      if (error) {
-        if (error.code === "23505") {
-          setAlreadyApplied(true);
-          showToast("You have already applied for this job", "info");
-          return;
-        }
-        console.error("Application submit error:", error);
-        showToast(error.message || "Failed to submit application", "error");
-        return;
-      }
+      if (error) throw error;
 
       await awardPoints(authUser.id, "job_apply", 10);
-      showToast("Application submitted successfully! +10 points", "success");
+      showToast("Application submitted! +10 points", "success");
       setAlreadyApplied(true);
       setForm(initialForm);
-      window.setTimeout(() => {
-        router.push("/jobs");
-      }, 1100);
-    } catch (err) {
-      console.error("Unexpected submit error:", err);
-      showToast("Something went wrong", "error");
-    } finally {
-      setSubmitting(false);
-    }
+      setTimeout(() => router.push("/jobs"), 1100);
+    } catch (err) { console.error(err); showToast("Submission failed", "error"); }
+    finally { setSubmitting(false); }
   }
 
   if (loading) {
@@ -393,7 +278,6 @@ export default function JobDetailPage() {
 
   const useExternalApply = !!job.external_apply_url?.trim();
 
-  // Helper to truncate bio for mobile (if not expanded)
   const getBioDisplay = () => {
     const fullBio = company?.about || "This company profile has not been completed yet. Check back soon for more details.";
     if (!isMobile) return fullBio;
@@ -405,13 +289,11 @@ export default function JobDetailPage() {
   const bioToShow = getBioDisplay();
   const showReadMoreBio = isMobile && (company?.about?.length || 0) > 100;
 
-  // Helper for job description truncation (mobile only)
   const getDescriptionDisplay = () => {
     const fullDesc = job.description || "";
     if (!isMobile) return fullDesc;
     if (descExpanded) return fullDesc;
     if (fullDesc.length <= 300) return fullDesc;
-    // Find the last space within the first 300 chars to avoid breaking a word
     const truncated = fullDesc.slice(0, 300);
     const lastSpace = truncated.lastIndexOf(" ");
     return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
@@ -450,8 +332,8 @@ export default function JobDetailPage() {
             </div>
             <div className="job-details">
               <p style={eyebrow}>Skill-based opportunity</p>
-              <h1 style={pageTitle}>{job.title}</h1>
-              <p style={pageSubtitle}>
+              <h1 style={pageTitle} className="job-title">{job.title}</h1>
+              <p style={{ ...pageSubtitle, wordBreak: "break-word", whiteSpace: "normal", overflowWrap: "break-word" }}>
                 {company?.company_name || "Company"} · {job.role_type || "Role"} ·{" "}
                 {job.location || "Location not set"}
               </p>
@@ -500,7 +382,6 @@ export default function JobDetailPage() {
               title="About this role"
               subtitle="A clear view of what the company needs"
             />
-            {/* Job description with preserved line breaks and read more toggle */}
             <div>
               <div style={{ ...bodyText, whiteSpace: "pre-wrap" }}>{descToShow}</div>
               {showReadMoreDesc && (
@@ -815,6 +696,13 @@ export default function JobDetailPage() {
       {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
 
       <style>{`
+  /* Force job title wrapping on mobile */
+  .job-title {
+    word-break: break-word !important;
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
   @media (max-width: 768px) {
     .logo-wrapper {
       display: none !important;
@@ -833,12 +721,6 @@ export default function JobDetailPage() {
     .job-details {
       width: 100%;
       margin-left: 16px;
-    }
-    /* ✅ Fix: ensure subtitle text wraps and doesn't get cut off */
-    .job-details .pageSubtitle {
-      word-break: break-word;
-      white-space: normal;
-      overflow-wrap: break-word;
     }
     .hero-actions {
       display: flex;
@@ -862,97 +744,8 @@ export default function JobDetailPage() {
     .pageSubtitle {
       font-size: 14px !important;
       text-align: left !important;
-      word-break: break-word; /* additional safeguard */
-    }
-    .metaPills {
-      justify-content: flex-start !important;
-      gap: 6px !important;
-    }
-    .metaPills span {
-      font-size: 11px !important;
-      padding: 4px 8px !important;
-    }
-    .layoutGrid {
-      grid-template-columns: 1fr !important;
-    }
-  }
-  @media (min-width: 769px) {
-    .hero-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 24px;
-    }
-    .hero-left {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-    .logo-wrapper {
-      flex-shrink: 0;
-    }
-    .job-details {
-      flex: 1;
-      margin-left: 20px;
-    }
-    .eyebrow {
-      margin-top: 0;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-  }
-`}</style><style>{`
-  @media (max-width: 768px) {
-    .logo-wrapper {
-      display: none !important;
-    }
-    .hero-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .hero-left {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-    }
-    .job-details {
-      width: 100%;
-      margin-left: 16px;
-    }
-    /* ✅ Fix: ensure subtitle text wraps */
-    .job-details .pageSubtitle {
-      word-break: break-word;
-      white-space: normal;
-      overflow-wrap: break-word;
-    }
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: flex-start;
-      margin-left: 16px;
-    }
-    .hero-actions button {
-      width: auto !important;
-      margin: 0 !important;
-    }
-    .eyebrow {
-      font-size: 11px !important;
-      text-align: left !important;
-    }
-    .pageTitle {
-      font-size: 28px !important;
-      text-align: left !important;
-    }
-    .pageSubtitle {
-      font-size: 14px !important;
-      text-align: left !important;
-      word-break: break-word;
+      word-break: break-word !important;
+      white-space: normal !important;
     }
     .metaPills {
       justify-content: flex-start !important;
@@ -1099,6 +892,7 @@ const pageTitle: CSSProperties = {
   fontWeight: 900,
   letterSpacing: "-0.04em",
   lineHeight: 1.1,
+  // No wordBreak here – handled by CSS class
 };
 
 const pageSubtitle: CSSProperties = {

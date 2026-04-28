@@ -63,6 +63,44 @@ function ProfileInner() {
   });
   const [aiLoading, setAiLoading] = useState(false);
 
+  async function syncUserBadges(userId: string, currentPoints: number) {
+    try {
+      const { data: allBadges, error: badgesError } = await supabase
+        .from("badges")
+        .select("*")
+        .order("min_points", { ascending: true });
+
+      if (badgesError) {
+        console.error("Error fetching badges:", badgesError);
+        return;
+      }
+      if (!allBadges || allBadges.length === 0) return;
+
+      const { data: owned, error: ownedError } = await supabase
+        .from("user_badges")
+        .select("badge_id")
+        .eq("user_id", userId);
+
+      if (ownedError) return;
+
+      const ownedSet = new Set(owned?.map((b: any) => b.badge_id) || []);
+      const toAward = allBadges.filter(
+        (badge: any) => currentPoints >= badge.min_points && !ownedSet.has(badge.id)
+      );
+
+      if (toAward.length === 0) return;
+
+      const inserts = toAward.map((badge: any) => ({
+        user_id: userId,
+        badge_id: badge.id,
+      }));
+
+      await supabase.from("user_badges").upsert(inserts, { onConflict: 'user_id, badge_id' });
+    } catch (err) {
+      console.error("Badge sync error:", err);
+    }
+  }
+
   useEffect(() => {
     loadData();
     document.documentElement.style.background = dark ? "#0b1220" : "#f8fafc";
@@ -105,6 +143,7 @@ function ProfileInner() {
       setProfile(profileData);
       setProjects(submissionsData || []);
 
+      await syncUserBadges(user.id, profileData?.total_points || 0);
       await loadBadges(user.id);
     } catch (err) {
       console.error("loadData error:", err);
@@ -220,6 +259,7 @@ function ProfileInner() {
     );
   }
 
+  // Updated PDF generation with watermark
   function downloadPdf() {
     if (!previewRef.current) {
       showToast("Nothing to download", "error");
@@ -229,8 +269,8 @@ function ProfileInner() {
     const styles = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; color: #0f172a; margin: 0; padding: 0; background: white; }
-        .cv-wrapper { display: flex; min-height: 100vh; width: 100%; }
+        body { font-family: 'Inter', sans-serif; color: #0f172a; margin: 0; padding: 0; background: white; font-size: 14px; }
+        .cv-wrapper { display: flex; min-height: 100vh; width: 100%; position: relative; }
         .sidebar { width: 30%; background: #0f172a; color: white; padding: 40px 25px; }
         .main-content { width: 70%; padding: 40px; background: white; }
         .avatar { width: 100%; border-radius: 12px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1); }
@@ -250,7 +290,36 @@ function ProfileInner() {
         th { text-align: left; background: #f8fafc; padding: 10px; font-size: 11px; color: #94a3b8; text-transform: uppercase; }
         td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #64748b; }
         .td-bold { font-weight: 700; color: #0f172a; width: 30%; }
-        @media print { * { -webkit-print-color-adjust: exact; } }
+        /* Watermark footer */
+        .watermark {
+          position: fixed;
+          bottom: 10px;
+          right: 20px;
+          left: 20px;
+          text-align: center;
+          font-size: 10px;
+          color: #cbd5e1;
+          border-top: 1px solid #e2e8f0;
+          padding-top: 8px;
+          margin-top: 20px;
+          background: white;
+          z-index: 1000;
+        }
+        .watermark img {
+          width: 16px;
+          height: 16px;
+          vertical-align: middle;
+          margin-right: 4px;
+        }
+        @media print {
+          .watermark {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+          }
+          body { padding-bottom: 30px; }
+        }
       </style>
     `;
     const w = window.open("", "_blank", "width=1000,height=900");
@@ -261,8 +330,14 @@ function ProfileInner() {
     w.document.open();
     w.document.write(`
       <html>
-        <head><title>${profile.full_name} — CV</title>${styles}</head>
-        <body>${content}</body>
+        <head><title>${profile.full_name || "CV"} — OfSkillJob CV</title>${styles}</head>
+        <body>
+          ${content}
+          <div class="watermark">
+            <img src="/favicon.ico" alt="OfSkillJob" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;">
+            powered by OfSkillJob
+          </div>
+        </body>
       </html>
     `);
     w.document.close();
@@ -344,6 +419,14 @@ function ProfileInner() {
     URL.revokeObjectURL(url);
     showToast("Profile exported", "success");
     incrementMetric("profile_clicks");
+  }
+
+  function handleWatchIntro() {
+    if (profile?.intro_video_url) {
+      window.open(profile.intro_video_url, '_blank', 'noopener,noreferrer');
+    } else {
+      showToast("No intro video added yet", "info");
+    }
   }
 
   if (loading) {
@@ -441,7 +524,7 @@ function ProfileInner() {
                 Edit Profile
               </button>
               <button onClick={downloadPdf} style={styles.secondaryBtn}>
-                Download PDF
+                Print CV
               </button>
               <button onClick={toggleDark} style={styles.secondaryBtn}>
                 {dark ? "Light" : "Dark"}
@@ -481,7 +564,6 @@ function ProfileInner() {
               {profile.phone && <span style={styles.metaBold}>{profile.phone}</span>}
             </div>
             <p style={styles.subText}>{profile.bio || "No summary provided."}</p>
-            {/* Only Share button remains here */}
             <div style={styles.heroButtons}>
               <button onClick={shareProfile} style={styles.ghostBtn}>
                 📤 Share
@@ -510,7 +592,6 @@ function ProfileInner() {
         </div>
       </div>
 
-      {/* Profile Completion + Points + Badges (unchanged) */}
       <div style={{ ...cardStyle, marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div style={{ flex: 1 }}>
@@ -598,10 +679,10 @@ function ProfileInner() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>🏅 Badges Earned</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <div className="badges-container" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 12 }}>
                 {badges.length === 0 && <span style={mutedText}>No badges yet – keep using the platform!</span>}
                 {badges.map((badge) => (
-                  <div key={badge.id} style={{ textAlign: "center", width: 80 }}>
+                  <div key={badge.id} style={{ textAlign: "center", width: "100%" }}>
                     <div style={{ fontSize: 32 }}>{badge.icon || "🏅"}</div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginTop: 4 }}>{badge.name}</div>
                   </div>
@@ -620,9 +701,7 @@ function ProfileInner() {
         </div>
       </div>
 
-      {/* Two column layout unchanged */}
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.9fr", gap: 18, alignItems: "start" }}>
-        {/* Left column unchanged */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={cardStyle}>
             <h2 style={sectionTitle}>About</h2>
@@ -691,7 +770,6 @@ function ProfileInner() {
           </div>
         </div>
 
-        {/* Right column unchanged */}
         <aside style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Contact & Links</h2>
@@ -701,7 +779,9 @@ function ProfileInner() {
               {profile.intro_video_url && (
                 <div>
                   <strong>Video Intro:</strong>{" "}
-                  <a href={profile.intro_video_url} target="_blank" rel="noreferrer" style={{ color: "#3b82f6" }}>Watch</a>
+                  <button onClick={handleWatchIntro} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: "inherit" }}>
+                    Watch
+                  </button>
                 </div>
               )}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
@@ -744,7 +824,7 @@ function ProfileInner() {
                 Edit Profile
               </button>
               <button onClick={downloadPdf} style={styles.actionBtn}>
-                Download PDF
+                Print CV
               </button>
               <button onClick={exportJSON} style={styles.actionBtn}>
                 Export JSON
@@ -760,7 +840,7 @@ function ProfileInner() {
         </aside>
       </div>
 
-      {/* Hidden PDF preview unchanged */}
+      {/* Hidden PDF preview */}
       <div style={{ display: "none" }}>
         <div ref={previewRef}>
           <div className="cv-wrapper">
@@ -835,11 +915,21 @@ function ProfileInner() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 640px) {
+          .badges-container {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
-// ---------- Styles (unchanged) ----------
+// ---------- Styles ----------
 const styles = {
   heroBanner: {
     borderRadius: 20,

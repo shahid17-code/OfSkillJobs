@@ -300,11 +300,12 @@ export default function JobsPage() {
                   {job.is_remote ? "• Remote" : "• On-site / Hybrid"}
                 </p>
 
-                <p style={jobDescription}>
+                {/* ✅ Description area – will push button down */}
+                <div style={jobDescription}>
                   {job.description.length > 180
                     ? `${job.description.slice(0, 180)}...`
                     : job.description}
-                </p>
+                </div>
 
                 <div style={pillRow}>
                   <span style={pill}>
@@ -542,6 +543,9 @@ const jobCard: React.CSSProperties = {
   padding: 20,
   boxShadow: "0 12px 35px rgba(2, 6, 23, 0.06)",
   border: "1px solid #eef2f7",
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",           // make all cards same height
 };
 
 const jobTopRow: React.CSSProperties = {
@@ -550,6 +554,7 @@ const jobTopRow: React.CSSProperties = {
   alignItems: "flex-start",
   gap: 12,
   marginBottom: 16,
+  flexShrink: 0,
 };
 
 const companyBadge: React.CSSProperties = {
@@ -615,19 +620,21 @@ const jobTitle: React.CSSProperties = {
   color: "#0f172a",
   letterSpacing: "-0.03em",
   lineHeight: 1.25,
+  flexShrink: 0,
 };
 
 const jobRole: React.CSSProperties = {
   margin: "8px 0 0",
   color: "#475569",
   fontWeight: 700,
+  flexShrink: 0,
 };
 
 const jobDescription: React.CSSProperties = {
   margin: "14px 0 0",
   color: "#475569",
   lineHeight: 1.8,
-  minHeight: 62,
+  flexGrow: 1,            // pushes the button to bottom
 };
 
 const pillRow: React.CSSProperties = {
@@ -635,6 +642,7 @@ const pillRow: React.CSSProperties = {
   gap: 10,
   flexWrap: "wrap",
   marginTop: 16,
+  flexShrink: 0,
 };
 
 const pill: React.CSSProperties = {
@@ -659,6 +667,7 @@ const appliedPill: React.CSSProperties = {
 
 const cardActions: React.CSSProperties = {
   marginTop: 18,
+  flexShrink: 0,
 };
 
 const primaryBtn: React.CSSProperties = {
