@@ -1,43 +1,8 @@
-// app/jobs/[slug]/page.tsx (server component)
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import JobDetailClient from "./JobDetailClient";
 
-// Define types inline (same as in client component)
-type Job = {
-  id: string;
-  company_id: string;
-  title: string;
-  slug: string;
-  role_type: string | null;
-  location: string | null;
-  is_remote: boolean | null;
-  salary_min: number | null;
-  salary_max: number | null;
-  description: string;
-  task_required: boolean | null;
-  task_title: string | null;
-  task_instructions: string | null;
-  task_type: string | null;
-  expires_at: string | null;
-  status: string | null;
-  created_at: string | null;
-  external_apply_url: string | null;
-};
-
-type Company = {
-  company_name?: string | null;
-  username?: string | null;
-  industry?: string | null;
-  location?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  logo_url?: string | null;
-  cover_url?: string | null;
-  about?: string | null;
-  website?: string | null;
-};
-
+// Generate static paths for all active jobs
 export async function generateStaticParams() {
   const { data: jobs } = await supabase
     .from("jobs")
@@ -46,11 +11,13 @@ export async function generateStaticParams() {
   return jobs?.map((job) => ({ slug: job.slug })) || [];
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+// Generate metadata for SEO
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const { data: job } = await supabase
     .from("jobs")
     .select("title, description")
-    .ilike("slug", params.slug)
+    .ilike("slug", slug)
     .maybeSingle();
 
   if (!job) return { title: "Job not found" };
@@ -61,11 +28,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function JobDetailPage({ params }: { params: { slug: string } }) {
+export default async function JobDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;          // ✅ await the params Promise
+
   const { data: job } = await supabase
     .from("jobs")
     .select("*")
-    .ilike("slug", params.slug)
+    .ilike("slug", slug)
     .maybeSingle();
 
   if (!job || job.status !== "active") notFound();
@@ -76,8 +45,10 @@ export default async function JobDetailPage({ params }: { params: { slug: string
     .eq("id", job.company_id)
     .maybeSingle();
 
+  // Get current user session (to pass to client)
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Build structured data (JobPosting)
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
