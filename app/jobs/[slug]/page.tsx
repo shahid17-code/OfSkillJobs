@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function JobDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;          // ✅ await the params Promise
+  const { slug } = await params;
 
   const { data: job } = await supabase
     .from("jobs")
@@ -45,17 +45,15 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
     .eq("id", job.company_id)
     .maybeSingle();
 
-  // Get current user session (to pass to client)
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Build structured data (JobPosting)
-  const structuredData = {
+  // Build structured data (JobPosting) with all recommended fields
+  const structuredData: any = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: job.title,
     description: job.description,
     datePosted: job.created_at?.split("T")[0],
-    validThrough: job.expires_at?.split("T")[0],
     employmentType: job.role_type?.toUpperCase(),
     hiringOrganization: {
       "@type": "Organization",
@@ -67,6 +65,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
       address: {
         "@type": "PostalAddress",
         addressLocality: job.location,
+        addressCountry: "IN",           // ✅ fixed missing country
+        // addressRegion and streetAddress are optional – we don't have the data
       },
     },
     identifier: {
@@ -74,18 +74,26 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
       name: "OfSkillJob",
       value: job.id,
     },
-    ...(job.salary_min && job.salary_max && {
-      baseSalary: {
-        "@type": "MonetaryAmount",
-        currency: "INR",
-        value: {
-          "@type": "QuantitativeValue",
-          minValue: job.salary_min,
-          maxValue: job.salary_max,
-        },
-      },
-    }),
   };
+
+  // Add validThrough only if the job has an expiry date (optional)
+  if (job.expires_at) {
+    structuredData.validThrough = job.expires_at.split("T")[0];
+  }
+
+  // Add salary details including unitText
+  if (job.salary_min && job.salary_max) {
+    structuredData.baseSalary = {
+      "@type": "MonetaryAmount",
+      currency: "INR",
+      value: {
+        "@type": "QuantitativeValue",
+        minValue: job.salary_min,
+        maxValue: job.salary_max,
+        unitText: "MONTH",            // ✅ fixed missing unitText (monthly salary)
+      },
+    };
+  }
 
   return (
     <>
