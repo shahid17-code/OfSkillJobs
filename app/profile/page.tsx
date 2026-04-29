@@ -63,6 +63,7 @@ function ProfileInner() {
   });
   const [aiLoading, setAiLoading] = useState(false);
 
+  // -------- Badge syncing (no duplicate errors) --------
   async function syncUserBadges(userId: string, currentPoints: number) {
     try {
       const { data: allBadges, error: badgesError } = await supabase
@@ -101,6 +102,7 @@ function ProfileInner() {
     }
   }
 
+  // -------- Load profile data --------
   useEffect(() => {
     loadData();
     document.documentElement.style.background = dark ? "#0b1220" : "#f8fafc";
@@ -165,6 +167,7 @@ function ProfileInner() {
     }
   }
 
+  // -------- UI helpers --------
   function showToast(message: string, type: ToastType = "info", duration = 3000) {
     setToast({ message, type });
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
@@ -228,6 +231,7 @@ function ProfileInner() {
     return badgesList;
   }
 
+  // -------- Share profile --------
   async function shareProfile() {
     if (!profile?.username) {
       showToast("Set a username in Edit Profile to share", "error");
@@ -259,7 +263,7 @@ function ProfileInner() {
     );
   }
 
-  // Updated PDF generation with watermark
+  // -------- PDF with watermark (print) --------
   function downloadPdf() {
     if (!previewRef.current) {
       showToast("Nothing to download", "error");
@@ -269,13 +273,13 @@ function ProfileInner() {
     const styles = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; color: #0f172a; margin: 0; padding: 0; background: white; font-size: 14px; }
-        .cv-wrapper { display: flex; min-height: 100vh; width: 100%; position: relative; }
+        body { font-family: 'Inter', sans-serif; color: #0f172a; margin: 0; padding: 0; background: white; }
+        .cv-wrapper { display: flex; min-height: 100vh; width: 100%; }
         .sidebar { width: 30%; background: #0f172a; color: white; padding: 40px 25px; }
         .main-content { width: 70%; padding: 40px; background: white; }
         .avatar { width: 100%; border-radius: 12px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1); }
         .side-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #94a3b8; margin: 25px 0 10px; }
-        .side-text { font-size: 13px; color: #cbd5e1; margin: 5px 0; word-break: break-all; }
+        .side-text { font-size: 13px; color: #cbd5e1; margin: 5px 0; }
         .pill-box { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
         .pill { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 11px; }
         .name { font-size: 36px; font-weight: 800; margin: 0; letter-spacing: -1px; }
@@ -287,15 +291,15 @@ function ProfileInner() {
         .item-date { font-size: 12px; font-weight: 700; color: #0f172a; }
         .item-desc { font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 15px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #f1f5f9; border-radius: 8px; overflow: hidden; }
-        th { text-align: left; background: #f8fafc; padding: 10px; font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+        th { text-align: left; background: #f8fafc; padding: 10px; font-size: 11px; color: #94a3b8; }
         td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #64748b; }
         .td-bold { font-weight: 700; color: #0f172a; width: 30%; }
-        /* Watermark footer */
+        /* Watermark */
         .watermark {
           position: fixed;
           bottom: 10px;
-          right: 20px;
-          left: 20px;
+          left: 0;
+          right: 0;
           text-align: center;
           font-size: 10px;
           color: #cbd5e1;
@@ -303,21 +307,15 @@ function ProfileInner() {
           padding-top: 8px;
           margin-top: 20px;
           background: white;
-          z-index: 1000;
         }
         .watermark img {
-          width: 16px;
-          height: 16px;
+          width: 14px;
+          height: 14px;
           vertical-align: middle;
           margin-right: 4px;
         }
         @media print {
-          .watermark {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-          }
+          .watermark { position: fixed; bottom: 0; }
           body { padding-bottom: 30px; }
         }
       </style>
@@ -334,8 +332,7 @@ function ProfileInner() {
         <body>
           ${content}
           <div class="watermark">
-            <img src="/favicon.ico" alt="OfSkillJob" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;">
-            powered by OfSkillJob
+            <img src="/favicon.ico" alt="OfSkillJob"> powered by OfSkillJob
           </div>
         </body>
       </html>
@@ -361,6 +358,7 @@ function ProfileInner() {
     }
   }
 
+  // -------- AI generation --------
   async function generateWithAI(kind: "bio" | "headline") {
     setAiLoading(true);
     try {
@@ -429,34 +427,28 @@ function ProfileInner() {
     }
   }
 
+  // -------- Loading / Error states --------
   if (loading) {
-    return (
-      <div style={{ padding: 60, textAlign: "center" }}>
-        Loading profile…
-      </div>
-    );
+    return <div style={{ padding: 60, textAlign: "center" }}>Loading profile…</div>;
   }
 
   if (error || !profile) {
     return (
       <div style={{ padding: 60, textAlign: "center" }}>
         <p>{error || "Profile not found"}</p>
-        <button
-          onClick={() => router.push("/profile/edit")}
-          style={styles.primaryBtn}
-        >
+        <button onClick={() => router.push("/profile/edit")} style={styles.primaryBtn}>
           Create Profile
         </button>
       </div>
     );
   }
 
+  // -------- Style objects (light / dark aware) --------
   const containerStyle = {
     maxWidth: 1120,
     margin: "0 auto",
     padding: 20,
-    fontFamily:
-      "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
+    fontFamily: "Inter, system-ui, sans-serif",
     background: dark ? "#0b1220" : "#f8fafc",
     minHeight: "100vh",
   };
@@ -465,9 +457,7 @@ function ProfileInner() {
     background: dark ? "#071022" : "white",
     borderRadius: 18,
     padding: 18,
-    boxShadow: dark
-      ? "0 8px 28px rgba(0,0,0,0.2)"
-      : "0 10px 30px rgba(2,6,23,0.06)",
+    boxShadow: dark ? "0 8px 28px rgba(0,0,0,0.2)" : "0 10px 30px rgba(2,6,23,0.06)",
     transition: "background 0.2s ease",
   };
 
@@ -490,6 +480,7 @@ function ProfileInner() {
     margin: 0,
   };
 
+  // -------- JSX --------
   return (
     <div style={containerStyle}>
       <div style={{ marginBottom: 18 }}>
@@ -506,7 +497,7 @@ function ProfileInner() {
           <div style={styles.heroTopRow}>
             <div style={styles.logoWrap}>
               {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.full_name || "Avatar"} style={styles.logoImg} />
+                <img src={profile.avatar_url} alt="Avatar" style={styles.logoImg} />
               ) : (
                 <div style={styles.logoFallback}>
                   {(profile.full_name?.[0] || "U").toUpperCase()}
@@ -514,39 +505,18 @@ function ProfileInner() {
               )}
             </div>
             <div style={styles.heroActions} className="profile-hero-actions">
-              <button onClick={shareProfile} style={styles.secondaryBtn}>
-                Share Profile
-              </button>
-              <button
-                onClick={() => router.push("/profile/edit")}
-                style={styles.editBtn}
-              >
-                Edit Profile
-              </button>
-              <button onClick={downloadPdf} style={styles.secondaryBtn}>
-                Print CV
-              </button>
-              <button onClick={toggleDark} style={styles.secondaryBtn}>
-                {dark ? "Light" : "Dark"}
-              </button>
+              <button onClick={shareProfile} style={styles.secondaryBtn}>Share Profile</button>
+              <button onClick={() => router.push("/profile/edit")} style={styles.editBtn}>Edit Profile</button>
+              <button onClick={downloadPdf} style={styles.secondaryBtn}>Print CV</button>
+              <button onClick={toggleDark} style={styles.secondaryBtn}>{dark ? "Light" : "Dark"}</button>
               <div style={{ width: 1, height: 32, background: "rgba(0,0,0,0.08)" }} />
-              <button
-                onClick={() => generateWithAI("headline")}
-                disabled={aiLoading}
-                style={styles.secondaryBtn}
-              >
+              <button onClick={() => generateWithAI("headline")} disabled={aiLoading} style={styles.secondaryBtn}>
                 {aiLoading ? "…" : "Gen Headline"}
               </button>
-              <button
-                onClick={() => generateWithAI("bio")}
-                disabled={aiLoading}
-                style={styles.secondaryBtn}
-              >
+              <button onClick={() => generateWithAI("bio")} disabled={aiLoading} style={styles.secondaryBtn}>
                 {aiLoading ? "…" : "Gen Bio"}
               </button>
-              <button onClick={exportJSON} style={styles.secondaryBtn}>
-                Export JSON
-              </button>
+              <button onClick={exportJSON} style={styles.secondaryBtn}>Export JSON</button>
             </div>
           </div>
 
@@ -565,107 +535,49 @@ function ProfileInner() {
             </div>
             <p style={styles.subText}>{profile.bio || "No summary provided."}</p>
             <div style={styles.heroButtons}>
-              <button onClick={shareProfile} style={styles.ghostBtn}>
-                📤 Share
-              </button>
+              <button onClick={shareProfile} style={styles.ghostBtn}>📤 Share</button>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Stats grid */}
       <div style={styles.statsGrid} className="profile-stats-grid">
-        <div style={statCard(dark)}>
-          <div style={styles.statValue}>{profile.views || 0}</div>
-          <div style={styles.statLabel}>Profile Views</div>
-        </div>
-        <div style={statCard(dark)}>
-          <div style={styles.statValue}>{profile.profile_clicks || 0}</div>
-          <div style={styles.statLabel}>Profile Shares</div>
-        </div>
-        <div style={statCard(dark)}>
-          <div style={styles.statValue}>{profile.downloads || 0}</div>
-          <div style={styles.statLabel}>PDF Downloads</div>
-        </div>
-        <div style={statCard(dark)}>
-          <div style={styles.statValue}>{projects.length}</div>
-          <div style={styles.statLabel}>Projects</div>
-        </div>
+        <div style={statCard(dark)}><div style={styles.statValue}>{profile.views || 0}</div><div style={styles.statLabel}>Profile Views</div></div>
+        <div style={statCard(dark)}><div style={styles.statValue}>{profile.profile_clicks || 0}</div><div style={styles.statLabel}>Profile Shares</div></div>
+        <div style={statCard(dark)}><div style={styles.statValue}>{profile.downloads || 0}</div><div style={styles.statLabel}>PDF Downloads</div></div>
+        <div style={statCard(dark)}><div style={styles.statValue}>{projects.length}</div><div style={styles.statLabel}>Projects</div></div>
       </div>
 
+      {/* Profile strength & badges */}
       <div style={{ ...cardStyle, marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: dark ? "#9fb0c9" : "#64748b", marginBottom: 8 }}>
-              Profile Strength
-            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: dark ? "#9fb0c9" : "#64748b", marginBottom: 8 }}>Profile Strength</div>
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
               <div style={{ position: "relative", width: 80, height: 80 }}>
                 <svg width="80" height="80" viewBox="0 0 120 120">
                   <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" strokeWidth="12" />
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="54"
-                    fill="none"
-                    stroke="url(#grad)"
-                    strokeWidth="12"
-                    strokeDasharray={2 * Math.PI * 54}
-                    strokeDashoffset={2 * Math.PI * 54 * (1 - completion.score / 100)}
-                    strokeLinecap="round"
-                    transform="rotate(-90 60 60)"
-                  />
-                  <defs>
-                    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#3b82f6" />
-                      <stop offset="100%" stopColor="#8b5cf6" />
-                    </linearGradient>
-                  </defs>
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="url(#grad)" strokeWidth="12" strokeDasharray={2 * Math.PI * 54} strokeDashoffset={2 * Math.PI * 54 * (1 - completion.score / 100)} strokeLinecap="round" transform="rotate(-90 60 60)" />
+                  <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#3b82f6" /><stop offset="100%" stopColor="#8b5cf6" /></linearGradient></defs>
                 </svg>
-                <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: 20, fontWeight: 800, color: dark ? "#fff" : "#0f172a" }}>
-                  {completion.score}%
-                </div>
+                <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: 20, fontWeight: 800, color: dark ? "#fff" : "#0f172a" }}>{completion.score}%</div>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16, color: dark ? "#e6eefb" : "#0f172a" }}>
-                  {getCompletionMessage(completion.score)}
-                </div>
-                <div style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b", marginTop: 4 }}>
-                  {completion.completed.length} of {completion.completed.length + completion.missing.length} sections completed
-                </div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: dark ? "#e6eefb" : "#0f172a" }}>{getCompletionMessage(completion.score)}</div>
+                <div style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b", marginTop: 4 }}>{completion.completed.length} of {completion.completed.length + completion.missing.length} sections completed</div>
               </div>
             </div>
           </div>
-          <button
-            onClick={() => router.push("/profile/edit")}
-            style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: 40, padding: "8px 18px", fontWeight: 600, cursor: "pointer" }}
-          >
-            Complete Profile
-          </button>
+          <button onClick={() => router.push("/profile/edit")} style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: 40, padding: "8px 18px", fontWeight: 600, cursor: "pointer" }}>Complete Profile</button>
         </div>
 
         {completion.missing.length > 0 && (
           <div style={{ marginTop: 20, borderTop: `1px solid ${dark ? "#1e293b" : "#eef2f7"}`, paddingTop: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: dark ? "#cbd5e1" : "#475569" }}>
-              ✨ Add these to reach 100%:
-            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: dark ? "#cbd5e1" : "#475569" }}>✨ Add these to reach 100%:</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {completion.missing.map((item) => (
-                <div
-                  key={item.key}
-                  style={{
-                    background: dark ? "#1e293b" : "#f8fafc",
-                    borderRadius: 40,
-                    padding: "6px 14px",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    color: dark ? "#94a3b8" : "#64748b",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <span>➕</span> {item.label}
-                </div>
+                <div key={item.key} style={{ background: dark ? "#1e293b" : "#f8fafc", borderRadius: 40, padding: "6px 14px", fontSize: 12, fontWeight: 500, color: dark ? "#94a3b8" : "#64748b", display: "flex", alignItems: "center", gap: 8 }}><span>➕</span> {item.label}</div>
               ))}
             </div>
           </div>
@@ -673,10 +585,7 @@ function ProfileInner() {
 
         <div style={{ marginTop: 20, borderTop: `1px solid ${dark ? "#1e293b" : "#eef2f7"}`, paddingTop: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569" }}>🏆 Total Points</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: dark ? "#fff" : "#0f172a" }}>{profile.total_points || 0}</div>
-            </div>
+            <div><div style={{ fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569" }}>🏆 Total Points</div><div style={{ fontSize: 28, fontWeight: 800, color: dark ? "#fff" : "#0f172a" }}>{profile.total_points || 0}</div></div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>🏅 Badges Earned</div>
               <div className="badges-container" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 12 }}>
@@ -693,80 +602,46 @@ function ProfileInner() {
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-          {skillBadges.length ? skillBadges.map(b => (
-            <span key={b} style={styles.badge}>{b}</span>
-          )) : (
-            <span style={mutedText}>Add skills and projects to unlock badges.</span>
-          )}
+          {skillBadges.length ? skillBadges.map(b => <span key={b} style={styles.badge}>{b}</span>) : <span style={mutedText}>Add skills and projects to unlock badges.</span>}
         </div>
       </div>
 
+      {/* Two column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.9fr", gap: 18, alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={cardStyle}>
-            <h2 style={sectionTitle}>About</h2>
-            <p style={bodyText}>{profile.bio || "No summary provided."}</p>
-          </div>
-
+          <div style={cardStyle}><h2 style={sectionTitle}>About</h2><p style={bodyText}>{profile.bio || "No summary provided."}</p></div>
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Experience</h2>
-            {!profile.experience?.length ? (
-              <p style={mutedText}>No experiences added</p>
-            ) : (
-              profile.experience.map((e: any, idx: number) => (
-                <div key={idx} style={{ marginBottom: 16, borderTop: idx > 0 ? "1px solid rgba(148,163,184,0.18)" : "none", paddingTop: idx > 0 ? 12 : 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
-                    <strong>{e.title}</strong> <span style={{ color: dark ? "#cbd5e1" : "#475569" }}>— {e.company}</span>
-                  </div>
-                  <div style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b", marginTop: 4 }}>
-                    {formatDate(e.startDate)} — {e.endDate ? formatDate(e.endDate) : "Present"}
-                  </div>
-                  {e.description && <div style={{ marginTop: 8, color: dark ? "#cbd5e1" : "#475569" }}>{e.description}</div>}
-                </div>
-              ))
-            )}
+            {!profile.experience?.length ? <p style={mutedText}>No experiences added</p> : profile.experience.map((e: any, idx: number) => (
+              <div key={idx} style={{ marginBottom: 16, borderTop: idx > 0 ? "1px solid rgba(148,163,184,0.18)" : "none", paddingTop: idx > 0 ? 12 : 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}><strong>{e.title}</strong> <span style={{ color: dark ? "#cbd5e1" : "#475569" }}>— {e.company}</span></div>
+                <div style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b", marginTop: 4 }}>{formatDate(e.startDate)} — {e.endDate ? formatDate(e.endDate) : "Present"}</div>
+                {e.description && <div style={{ marginTop: 8, color: dark ? "#cbd5e1" : "#475569" }}>{e.description}</div>}
+              </div>
+            ))}
           </div>
-
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Education</h2>
-            {!profile.education?.length ? (
-              <p style={mutedText}>No education listed</p>
-            ) : (
-              profile.education.map((ed: any, idx: number) => (
-                <div key={idx} style={{ marginBottom: 16, borderTop: idx > 0 ? "1px solid rgba(148,163,184,0.18)" : "none", paddingTop: idx > 0 ? 12 : 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
-                    <strong>{ed.degree}</strong> <span style={{ color: dark ? "#cbd5e1" : "#475569" }}>— {ed.school}</span>
-                  </div>
-                  <div style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b", marginTop: 4 }}>
-                    {formatDate(ed.startDate)} — {ed.endDate ? formatDate(ed.endDate) : ""}
-                  </div>
-                  {ed.description && <div style={{ marginTop: 8, color: dark ? "#cbd5e1" : "#475569" }}>{ed.description}</div>}
-                </div>
-              ))
-            )}
+            {!profile.education?.length ? <p style={mutedText}>No education listed</p> : profile.education.map((ed: any, idx: number) => (
+              <div key={idx} style={{ marginBottom: 16, borderTop: idx > 0 ? "1px solid rgba(148,163,184,0.18)" : "none", paddingTop: idx > 0 ? 12 : 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}><strong>{ed.degree}</strong> <span style={{ color: dark ? "#cbd5e1" : "#475569" }}>— {ed.school}</span></div>
+                <div style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b", marginTop: 4 }}>{formatDate(ed.startDate)} — {ed.endDate ? formatDate(ed.endDate) : ""}</div>
+                {ed.description && <div style={{ marginTop: 8, color: dark ? "#cbd5e1" : "#475569" }}>{ed.description}</div>}
+              </div>
+            ))}
           </div>
-
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Projects ({projects.length})</h2>
-            {!projects.length ? (
-              <p style={mutedText}>No projects submitted</p>
-            ) : (
-              projects.map(p => (
-                <div key={p.id} style={{ marginBottom: 16, borderTop: "1px solid rgba(148,163,184,0.18)", paddingTop: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
-                    <strong>{p.title}</strong>
-                    <span style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b" }}>
-                      {p.created_at ? new Date(p.created_at).toLocaleDateString() : ""}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: 6, color: dark ? "#cbd5e1" : "#475569" }}>{p.description}</div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-                    {p.repo_url && <a href={normalizeUrl(p.repo_url)} target="_blank" rel="noreferrer" style={styles.linkBadge}>Code</a>}
-                    {p.file_url && <a href={normalizeUrl(p.file_url)} target="_blank" rel="noreferrer" style={styles.linkBadge}>Live</a>}
-                  </div>
+            {!projects.length ? <p style={mutedText}>No projects submitted</p> : projects.map(p => (
+              <div key={p.id} style={{ marginBottom: 16, borderTop: "1px solid rgba(148,163,184,0.18)", paddingTop: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}><strong>{p.title}</strong><span style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b" }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : ""}</span></div>
+                <div style={{ marginTop: 6, color: dark ? "#cbd5e1" : "#475569" }}>{p.description}</div>
+                <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                  {p.repo_url && <a href={normalizeUrl(p.repo_url)} target="_blank" style={styles.linkBadge}>Code</a>}
+                  {p.file_url && <a href={normalizeUrl(p.file_url)} target="_blank" style={styles.linkBadge}>Live</a>}
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -777,64 +652,33 @@ function ProfileInner() {
               <div><strong>Email:</strong> <span style={{ color: dark ? "#cbd5e1" : "#475569" }}>{profile.email || "—"}</span></div>
               <div><strong>Phone:</strong> <span style={{ color: dark ? "#cbd5e1" : "#475569" }}>{profile.phone || "—"}</span></div>
               {profile.intro_video_url && (
-                <div>
-                  <strong>Video Intro:</strong>{" "}
-                  <button onClick={handleWatchIntro} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: "inherit" }}>
-                    Watch
-                  </button>
-                </div>
+                <div><strong>Video Intro:</strong> <button onClick={handleWatchIntro} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}>Watch</button></div>
               )}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
-                {profile.github && <a href={normalizeUrl(profile.github)} target="_blank" rel="noreferrer" style={styles.linkBadge}>GitHub</a>}
-                {profile.linkedin && <a href={normalizeUrl(profile.linkedin)} target="_blank" rel="noreferrer" style={styles.linkBadge}>LinkedIn</a>}
-                {profile.website && <a href={normalizeUrl(profile.website)} target="_blank" rel="noreferrer" style={styles.linkBadge}>Portfolio</a>}
+                {profile.github && <a href={normalizeUrl(profile.github)} target="_blank" style={styles.linkBadge}>GitHub</a>}
+                {profile.linkedin && <a href={normalizeUrl(profile.linkedin)} target="_blank" style={styles.linkBadge}>LinkedIn</a>}
+                {profile.website && <a href={normalizeUrl(profile.website)} target="_blank" style={styles.linkBadge}>Portfolio</a>}
               </div>
             </div>
           </div>
-
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Skills</h2>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(profile.skills || []).map((s: string, i: number) => (
-                <span key={i} style={styles.skillTag}>{s}</span>
-              ))}
-            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{(profile.skills || []).map((s: string, i: number) => <span key={i} style={styles.skillTag}>{s}</span>)}</div>
             {!hasPublicLinks && <p style={{ ...mutedText, marginTop: 12 }}>Add GitHub, LinkedIn, or portfolio links for a stronger profile.</p>}
           </div>
-
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Languages</h2>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(profile.languages || []).map((lang: string, i: number) => (
-                <span key={i} style={styles.skillTag}>{lang}</span>
-              ))}
-            </div>
-            {(!profile.languages || profile.languages.length === 0) && (
-              <p style={mutedText}>No languages added.</p>
-            )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{(profile.languages || []).map((lang: string, i: number) => <span key={i} style={styles.skillTag}>{lang}</span>)}</div>
+            {(!profile.languages || profile.languages.length === 0) && <p style={mutedText}>No languages added.</p>}
           </div>
-
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Quick Actions</h2>
             <div style={{ display: "grid", gap: 10 }}>
-              <button onClick={shareProfile} style={styles.actionBtn}>
-                Copy Profile Link
-              </button>
-              <button onClick={() => router.push("/profile/edit")} style={styles.actionBtnSecondary}>
-                Edit Profile
-              </button>
-              <button onClick={downloadPdf} style={styles.actionBtn}>
-                Print CV
-              </button>
-              <button onClick={exportJSON} style={styles.actionBtn}>
-                Export JSON
-              </button>
-              <button 
-                onClick={() => router.push(`/applications/${profile.id}`)} 
-                style={styles.actionBtn}
-              >
-                Track Applications
-              </button>
+              <button onClick={shareProfile} style={styles.actionBtn}>Copy Profile Link</button>
+              <button onClick={() => router.push("/profile/edit")} style={styles.actionBtnSecondary}>Edit Profile</button>
+              <button onClick={downloadPdf} style={styles.actionBtn}>Print CV</button>
+              <button onClick={exportJSON} style={styles.actionBtn}>Export JSON</button>
+              <button onClick={() => router.push(`/applications/${profile.id}`)} style={styles.actionBtn}>Track Applications</button>
             </div>
           </div>
         </aside>
@@ -854,13 +698,9 @@ function ProfileInner() {
               {profile.github && <div className="side-text">Git: {profile.github}</div>}
               {profile.linkedin && <div className="side-text">In: {profile.linkedin}</div>}
               <div className="side-label">Skills</div>
-              <div className="pill-box">
-                {profile.skills.map((s: string) => <span key={s} className="pill">{s}</span>)}
-              </div>
+              <div className="pill-box">{profile.skills.map((s: string) => <span key={s} className="pill">{s}</span>)}</div>
               <div className="side-label">Languages</div>
-              <div className="pill-box">
-                {profile.languages.map((l: string) => <span key={l} className="pill">{l}</span>)}
-              </div>
+              <div className="pill-box">{profile.languages.map((l: string) => <span key={l} className="pill">{l}</span>)}</div>
             </div>
             <div className="main-content">
               <h1 className="name">{profile.full_name}</h1>
@@ -871,50 +711,26 @@ function ProfileInner() {
               <div className="section-title">Experience</div>
               {profile.experience?.map((exp: any, i: number) => (
                 <div key={i}>
-                  <div className="item-head">
-                    <span className="item-title">{exp.title} — {exp.company}</span>
-                    <span className="item-date">{exp.startDate} – {exp.endDate || "Present"}</span>
-                  </div>
+                  <div className="item-head"><span className="item-title">{exp.title} — {exp.company}</span><span className="item-date">{exp.startDate} – {exp.endDate || "Present"}</span></div>
                   <p className="item-desc">{exp.description}</p>
                 </div>
               ))}
               <div className="section-title">Education</div>
               {profile.education?.map((edu: any, i: number) => (
                 <div key={i}>
-                  <div className="item-head">
-                    <span className="item-title">{edu.degree}</span>
-                    <span className="item-date">{edu.startDate} – {edu.endDate || "N/A"}</span>
-                  </div>
-                  <div style={{fontSize: '13px', color: '#64748b', marginBottom: '4px'}}>{edu.school}</div>
+                  <div className="item-head"><span className="item-title">{edu.degree}</span><span className="item-date">{edu.startDate} – {edu.endDate || "N/A"}</span></div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>{edu.school}</div>
                   <p className="item-desc">{edu.description}</p>
                 </div>
               ))}
               <div className="section-title">Projects</div>
-              <table>
-                <thead>
-                  <tr><th>Project</th><th>Description</th></tr>
-                </thead>
-                <tbody>
-                  {projects.map(p => (
-                    <tr key={p.id}>
-                      <td className="td-bold">{p.title}</td>
-                      <td>{p.description}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <table><thead><tr><th>Project</th><th>Description</th></tr></thead><tbody>{projects.map(p => (<tr key={p.id}><td className="td-bold">{p.title}</td><td>{p.description}</td></tr>))}</tbody></table>
             </div>
           </div>
         </div>
       </div>
 
-      {toast && (
-        <div style={styles.toast}>
-          <div style={{ ...styles.toastInner, background: toast.type === "success" ? "#10b981" : toast.type === "error" ? "#ef4444" : "#2563eb" }}>
-            {toast.message}
-          </div>
-        </div>
-      )}
+      {toast && <div style={styles.toast}><div style={{ ...styles.toastInner, background: toast.type === "success" ? "#10b981" : toast.type === "error" ? "#ef4444" : "#2563eb" }}>{toast.message}</div></div>}
 
       <style>{`
         @media (max-width: 640px) {
@@ -929,223 +745,36 @@ function ProfileInner() {
   );
 }
 
-// ---------- Styles ----------
+// ---------- Styles (unchanged from original) ----------
 const styles = {
-  heroBanner: {
-    borderRadius: 20,
-    overflow: "hidden" as const,
-    minHeight: 340,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    boxShadow: "0 18px 45px rgba(2, 6, 23, 0.12)",
-    padding: 22,
-    display: "flex",
-    flexDirection: "column" as const,
-    justifyContent: "space-between",
-  },
-  heroTopRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  logoWrap: {
-    width: 92,
-    height: 92,
-    borderRadius: 18,
-    overflow: "hidden",
-    background: "rgba(255,255,255,0.92)",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.10)",
-  },
-  logoImg: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover" as const,
-  },
-  logoFallback: {
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 34,
-    fontWeight: 800,
-    color: "#0f172a",
-    background: "linear-gradient(135deg, #f8fafc, #e2e8f0)",
-  },
-  heroActions: {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap" as const,
-    justifyContent: "flex-end",
-  },
-  heroContent: {
-    marginTop: 16,
-    background: "rgba(255,255,255,0.80)",
-    backdropFilter: "blur(8px)",
-    borderRadius: 18,
-    padding: 18,
-    boxShadow: "0 12px 30px rgba(255,255,255,0.10)",
-  },
-  titleRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap" as const,
-  },
-  companyNameStyle: {
-    margin: 0,
-    fontSize: 34,
-    fontWeight: 800,
-    letterSpacing: "-0.02em",
-    color: "#0f172a",
-  },
-  metaRow: {
-    display: "flex",
-    gap: 8,
-    flexWrap: "wrap" as const,
-    marginTop: 10,
-    color: "#334155",
-    fontSize: 14,
-  },
-  metaBold: {
-    fontWeight: 800,
-    color: "#0f172a",
-  },
-  metaDot: {
-    color: "#94a3b8",
-  },
-  subText: {
-    marginTop: 14,
-    marginBottom: 0,
-    color: "#334155",
-    lineHeight: 1.75,
-    maxWidth: 900,
-  },
-  heroButtons: {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap" as const,
-    marginTop: 16,
-  },
-  primaryBtn: {
-    background: "#2563eb",
-    color: "white",
-    padding: "10px 14px",
-    borderRadius: 12,
-    textDecoration: "none",
-    fontWeight: 700,
-    border: "none",
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryBtn: {
-    background: "rgba(255,255,255,0.92)",
-    color: "#0f172a",
-    padding: "10px 14px",
-    borderRadius: 12,
-    border: "1px solid rgba(15,23,42,0.08)",
-    cursor: "pointer",
-    fontWeight: 700,
-  },
-  editBtn: {
-    background: "#0f172a",
-    color: "white",
-    padding: "10px 14px",
-    borderRadius: 12,
-    border: "1px solid rgba(15,23,42,0.12)",
-    cursor: "pointer",
-    fontWeight: 700,
-  },
-  ghostBtn: {
-    background: "rgba(255,255,255,0.82)",
-    color: "#0f172a",
-    padding: "10px 14px",
-    borderRadius: 12,
-    textDecoration: "none",
-    border: "1px solid rgba(15,23,42,0.08)",
-    cursor: "pointer",
-    fontWeight: 700,
-  },
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 14,
-    marginBottom: 18,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 800,
-    color: "#0f172a",
-  },
-  statLabel: {
-    marginTop: 6,
-    fontSize: 13,
-    color: "#64748b",
-  },
-  badge: {
-    background: "#eef2ff",
-    color: "#3730a3",
-    borderRadius: 999,
-    padding: "7px 10px",
-    fontSize: 13,
-    fontWeight: 700,
-  },
-  linkBadge: {
-    background: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    padding: "8px 12px",
-    borderRadius: 12,
-    textDecoration: "none",
-    color: "#0f172a",
-    fontWeight: 700,
-    fontSize: 13,
-  },
-  skillTag: {
-    background: "#eef2ff",
-    padding: "5px 10px",
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#3730a3",
-  },
-  actionBtn: {
-    width: "100%",
-    background: "#eef2ff",
-    color: "#0f172a",
-    padding: "10px 14px",
-    borderRadius: 12,
-    border: "1px solid #e0e7ff",
-    cursor: "pointer",
-    fontWeight: 700,
-    textAlign: "center" as const,
-  },
-  actionBtnSecondary: {
-    width: "100%",
-    background: "#0f172a",
-    color: "white",
-    padding: "10px 14px",
-    borderRadius: 12,
-    border: "1px solid #0f172a",
-    cursor: "pointer",
-    fontWeight: 700,
-    textAlign: "center" as const,
-  },
-  toast: {
-    position: "fixed" as const,
-    top: 18,
-    right: 18,
-    zIndex: 1400,
-  },
-  toastInner: {
-    padding: "10px 14px",
-    borderRadius: 12,
-    color: "white",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
-    fontWeight: 700,
-  },
+  heroBanner: { borderRadius: 20, overflow: "hidden" as const, minHeight: 340, backgroundSize: "cover", backgroundPosition: "center", boxShadow: "0 18px 45px rgba(2,6,23,0.12)", padding: 22, display: "flex", flexDirection: "column" as const, justifyContent: "space-between" },
+  heroTopRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
+  logoWrap: { width: 92, height: 92, borderRadius: 18, overflow: "hidden", background: "rgba(255,255,255,0.92)", boxShadow: "0 10px 30px rgba(0,0,0,0.10)" },
+  logoImg: { width: "100%", height: "100%", objectFit: "cover" as const },
+  logoFallback: { width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, fontWeight: 800, color: "#0f172a", background: "linear-gradient(135deg, #f8fafc, #e2e8f0)" },
+  heroActions: { display: "flex", gap: 10, flexWrap: "wrap" as const, justifyContent: "flex-end" },
+  heroContent: { marginTop: 16, background: "rgba(255,255,255,0.80)", backdropFilter: "blur(8px)", borderRadius: 18, padding: 18, boxShadow: "0 12px 30px rgba(255,255,255,0.10)" },
+  titleRow: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const },
+  companyNameStyle: { margin: 0, fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", color: "#0f172a" },
+  metaRow: { display: "flex", gap: 8, flexWrap: "wrap" as const, marginTop: 10, color: "#334155", fontSize: 14 },
+  metaBold: { fontWeight: 800, color: "#0f172a" },
+  metaDot: { color: "#94a3b8" },
+  subText: { marginTop: 14, marginBottom: 0, color: "#334155", lineHeight: 1.75, maxWidth: 900 },
+  heroButtons: { display: "flex", gap: 10, flexWrap: "wrap" as const, marginTop: 16 },
+  primaryBtn: { background: "#2563eb", color: "white", padding: "10px 14px", borderRadius: 12, textDecoration: "none", fontWeight: 700, border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" },
+  secondaryBtn: { background: "rgba(255,255,255,0.92)", color: "#0f172a", padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(15,23,42,0.08)", cursor: "pointer", fontWeight: 700 },
+  editBtn: { background: "#0f172a", color: "white", padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(15,23,42,0.12)", cursor: "pointer", fontWeight: 700 },
+  ghostBtn: { background: "rgba(255,255,255,0.82)", color: "#0f172a", padding: "10px 14px", borderRadius: 12, textDecoration: "none", border: "1px solid rgba(15,23,42,0.08)", cursor: "pointer", fontWeight: 700 },
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 18 },
+  statValue: { fontSize: 18, fontWeight: 800, color: "#0f172a" },
+  statLabel: { marginTop: 6, fontSize: 13, color: "#64748b" },
+  badge: { background: "#eef2ff", color: "#3730a3", borderRadius: 999, padding: "7px 10px", fontSize: 13, fontWeight: 700 },
+  linkBadge: { background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: 12, textDecoration: "none", color: "#0f172a", fontWeight: 700, fontSize: 13 },
+  skillTag: { background: "#eef2ff", padding: "5px 10px", borderRadius: 8, fontSize: 13, fontWeight: 500, color: "#3730a3" },
+  actionBtn: { width: "100%", background: "#eef2ff", color: "#0f172a", padding: "10px 14px", borderRadius: 12, border: "1px solid #e0e7ff", cursor: "pointer", fontWeight: 700, textAlign: "center" as const },
+  actionBtnSecondary: { width: "100%", background: "#0f172a", color: "white", padding: "10px 14px", borderRadius: 12, border: "1px solid #0f172a", cursor: "pointer", fontWeight: 700, textAlign: "center" as const },
+  toast: { position: "fixed" as const, top: 18, right: 18, zIndex: 1400 },
+  toastInner: { padding: "10px 14px", borderRadius: 12, color: "white", boxShadow: "0 10px 30px rgba(0,0,0,0.16)", fontWeight: 700 },
 };
 
 function statCard(dark: boolean) {
@@ -1153,8 +782,6 @@ function statCard(dark: boolean) {
     background: dark ? "#071022" : "white",
     borderRadius: 16,
     padding: 16,
-    boxShadow: dark
-      ? "0 8px 28px rgba(0,0,0,0.2)"
-      : "0 10px 30px rgba(2,6,23,0.06)",
+    boxShadow: dark ? "0 8px 28px rgba(0,0,0,0.2)" : "0 10px 30px rgba(2,6,23,0.06)",
   };
 }

@@ -69,7 +69,7 @@ export default function JobDetailPage() {
       ? params.slug[0]
       : "";
 
-  const toastTimer = useRef<number | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -197,7 +197,11 @@ export default function JobDetailPage() {
     e.preventDefault();
     if (!job || expired) return showToast(expired ? "Job closed" : "Job not found", "error");
     if (alreadyApplied) return showToast("Already applied", "info");
-    if (!authUser) return showToast("Please sign up or log in", "info") && router.push("/signup");
+    if (!authUser) {
+      showToast("Please sign up or log in", "info");
+      router.push("/signup");
+      return;
+    }
 
     const { applicant_name, applicant_email, resume_link, drive_link, applicant_phone, note } = form;
     if (!applicant_name || !applicant_email || !resume_link || !drive_link)
@@ -587,7 +591,6 @@ export default function JobDetailPage() {
                       disabled={alreadyApplied}
                     />
                   </Field>
-
                   <Field label="Email *">
                     <input
                       name="applicant_email"
@@ -598,7 +601,6 @@ export default function JobDetailPage() {
                       disabled={alreadyApplied}
                     />
                   </Field>
-
                   <Field label="Phone">
                     <input
                       name="applicant_phone"
@@ -609,79 +611,57 @@ export default function JobDetailPage() {
                       disabled={alreadyApplied}
                     />
                   </Field>
-
                   <Field label="Resume link *">
                     <input
                       name="resume_link"
                       value={form.resume_link}
                       onChange={handleChange}
-                      placeholder="Paste your resume / portfolio link"
+                      placeholder="Resume / portfolio link"
                       style={input}
                       disabled={alreadyApplied}
                     />
                   </Field>
-
                   <Field label="Google Drive link *">
                     <input
                       name="drive_link"
                       value={form.drive_link}
                       onChange={handleChange}
-                      placeholder="Paste your Drive folder or file link"
+                      placeholder="Drive folder link"
                       style={input}
                       disabled={alreadyApplied}
                     />
                   </Field>
-
                   <Field label="Note">
                     <textarea
                       name="note"
                       value={form.note}
                       onChange={handleChange}
-                      placeholder="Short note about your submission"
+                      placeholder="Short note"
                       style={textarea}
                       disabled={alreadyApplied}
                     />
                   </Field>
-
                   <button
                     type="submit"
                     style={submitBtn}
                     disabled={submitting || expired || alreadyApplied}
                   >
-                    {submitting
-                      ? "Submitting..."
-                      : alreadyApplied
-                      ? "Already Applied"
-                      : expired
-                      ? "Job Closed"
-                      : "Submit Application"}
+                    {submitting ? "Submitting..." : alreadyApplied ? "Already Applied" : expired ? "Job Closed" : "Submit Application"}
                   </button>
                 </form>
               ) : (
                 <div style={guestBox}>
-                  <p style={guestText}>
-                    To submit an application, sign up or log in first. Your email can be
-                    prefilled automatically, and the company will receive your links
-                    cleanly.
-                  </p>
-
+                  <p style={guestText}>Sign up or log in to apply.</p>
                   <div style={guestActions}>
-                    <button type="button" style={primaryBtn} onClick={() => router.push("/signup")}>
-                      Sign up
-                    </button>
-                    <button type="button" style={ghostBtn} onClick={() => router.push("/login")}>
-                      Log in
-                    </button>
+                    <button style={primaryBtn} onClick={() => router.push("/signup")}>Sign up</button>
+                    <button style={ghostBtn} onClick={() => router.push("/login")}>Log in</button>
                   </div>
                 </div>
               )}
             </div>
 
             <div style={tipsCard}>
-              <SectionHeader
-                title="Submission tips"
-                subtitle="A strong application looks clear"
-              />
+              <SectionHeader title="Submission tips" subtitle="A strong application looks clear" />
               <ul style={tipsList}>
                 <li>Use one Drive folder with access enabled.</li>
                 <li>Keep your note short and specific.</li>
@@ -696,109 +676,39 @@ export default function JobDetailPage() {
       {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
 
       <style>{`
-  /* Force job title wrapping on mobile */
   .job-title {
     word-break: break-word !important;
     white-space: normal !important;
     overflow-wrap: break-word !important;
   }
-
   @media (max-width: 768px) {
-    .logo-wrapper {
-      display: none !important;
-    }
-    .hero-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .hero-left {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-    }
-    .job-details {
-      width: 100%;
-      margin-left: 16px;
-    }
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: flex-start;
-      margin-left: 16px;
-    }
-    .hero-actions button {
-      width: auto !important;
-      margin: 0 !important;
-    }
-    .eyebrow {
-      font-size: 11px !important;
-      text-align: left !important;
-    }
-    .pageTitle {
-      font-size: 28px !important;
-      text-align: left !important;
-    }
-    .pageSubtitle {
-      font-size: 14px !important;
-      text-align: left !important;
-      word-break: break-word !important;
-      white-space: normal !important;
-    }
-    .metaPills {
-      justify-content: flex-start !important;
-      gap: 6px !important;
-    }
-    .metaPills span {
-      font-size: 11px !important;
-      padding: 4px 8px !important;
-    }
-    .layoutGrid {
-      grid-template-columns: 1fr !important;
-    }
+    .logo-wrapper { display: none !important; }
+    .hero-container { flex-direction: column; gap: 16px; }
+    .hero-left { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .job-details { width: 100%; margin-left: 16px; }
+    .hero-actions { margin-left: 16px; }
+    .eyebrow { font-size: 11px !important; text-align: left !important; }
+    .pageTitle { font-size: 28px !important; text-align: left !important; }
+    .pageSubtitle { font-size: 14px !important; text-align: left !important; word-break: break-word !important; white-space: normal !important; }
+    .metaPills { gap: 6px !important; }
+    .metaPills span { font-size: 11px !important; padding: 4px 8px !important; }
+    .layoutGrid { grid-template-columns: 1fr !important; }
   }
   @media (min-width: 769px) {
-    .hero-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 24px;
-    }
-    .hero-left {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-    .logo-wrapper {
-      flex-shrink: 0;
-    }
-    .job-details {
-      flex: 1;
-      margin-left: 20px;
-    }
-    .eyebrow {
-      margin-top: 0;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
+    .hero-container { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+    .hero-left { display: flex; align-items: center; gap: 24px; }
+    .logo-wrapper { flex-shrink: 0; }
+    .job-details { flex: 1; margin-left: 20px; }
+    .eyebrow { margin-top: 0; }
+    .hero-actions { display: flex; gap: 12px; }
   }
 `}</style>
     </div>
   );
 }
 
-function SectionHeader({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle?: string;
-}) {
+// Helper components
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <h2 style={sectionTitle}>{title}</h2>
@@ -816,13 +726,7 @@ function InfoBox({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label style={field}>
       <span style={fieldLabel}>{label}</span>
@@ -831,7 +735,7 @@ function Field({
   );
 }
 
-// All style definitions remain unchanged (kept as in original)
+// Style objects
 const pageShell: CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",
@@ -892,7 +796,6 @@ const pageTitle: CSSProperties = {
   fontWeight: 900,
   letterSpacing: "-0.04em",
   lineHeight: 1.1,
-  // No wordBreak here – handled by CSS class
 };
 
 const pageSubtitle: CSSProperties = {
@@ -910,10 +813,9 @@ const metaPills: CSSProperties = {
 };
 
 const statusPill = (mode: "open" | "closed"): CSSProperties => ({
-  background:
-    mode === "open"
-      ? "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)"
-      : "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
+  background: mode === "open"
+    ? "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)"
+    : "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
   color: mode === "open" ? "#166534" : "#991b1b",
   padding: "8px 12px",
   borderRadius: 999,
@@ -1076,11 +978,11 @@ const taskText: CSSProperties = {
   whiteSpace: "pre-wrap",
   color: "#334155",
   lineHeight: 1.8,
-  fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial',
+  fontFamily: 'Inter, system-ui',
   background: "rgba(255,255,255,0.6)",
   padding: 14,
   borderRadius: 14,
-  border: "1px solid rgba(148, 163, 184, 0.25)",
+  border: "1px solid rgba(148,163,184,0.25)",
 };
 
 const companyCard: CSSProperties = {
@@ -1125,7 +1027,6 @@ const companyName: CSSProperties = {
   color: "#0f172a",
   fontSize: 20,
   fontWeight: 900,
-  letterSpacing: "-0.03em",
 };
 
 const companyMeta: CSSProperties = {
@@ -1159,13 +1060,7 @@ const linkPill: CSSProperties = {
 };
 
 const linkPillBtn: CSSProperties = {
-  background: "#f8fafc",
-  border: "1px solid #e2e8f0",
-  color: "#0f172a",
-  padding: "9px 12px",
-  borderRadius: 999,
-  fontWeight: 800,
-  fontSize: 13,
+  ...linkPill,
   cursor: "pointer",
 };
 
@@ -1207,29 +1102,15 @@ const input: CSSProperties = {
 };
 
 const textarea: CSSProperties = {
-  width: "100%",
-  border: "1px solid #dbe3ee",
-  borderRadius: 14,
-  padding: "12px 14px",
-  outline: "none",
-  fontSize: 14,
-  background: "#fff",
-  color: "#0f172a",
-  boxSizing: "border-box",
+  ...input,
   resize: "vertical",
   minHeight: 120,
   lineHeight: 1.7,
 };
 
 const submitBtn: CSSProperties = {
-  background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
-  color: "white",
-  border: "none",
+  ...primaryBtn,
   padding: "13px 16px",
-  borderRadius: 14,
-  cursor: "pointer",
-  fontWeight: 900,
-  boxShadow: "0 10px 25px rgba(37,99,235,0.20)",
 };
 
 const guestBox: CSSProperties = {
@@ -1253,11 +1134,7 @@ const guestActions: CSSProperties = {
 };
 
 const tipsCard: CSSProperties = {
-  background: "white",
-  borderRadius: 26,
-  padding: 22,
-  boxShadow: "0 12px 35px rgba(2,6,23,0.06)",
-  border: "1px solid #eef2f7",
+  ...premiumCard,
 };
 
 const tipsList: CSSProperties = {
@@ -1283,7 +1160,6 @@ const loadingCard: CSSProperties = {
   padding: 40,
   textAlign: "center",
   boxShadow: "0 10px 30px rgba(2,6,23,0.06)",
-  border: "1px solid #eef2f7",
 };
 
 const loadingSpinner: CSSProperties = {
@@ -1296,12 +1172,7 @@ const loadingSpinner: CSSProperties = {
 };
 
 const emptyCard: CSSProperties = {
-  background: "white",
-  borderRadius: 24,
-  padding: 40,
-  textAlign: "center",
-  boxShadow: "0 10px 30px rgba(2,6,23,0.06)",
-  border: "1px solid #eef2f7",
+  ...loadingCard,
 };
 
 const toastStyle = (type: ToastType): CSSProperties => ({
@@ -1309,8 +1180,7 @@ const toastStyle = (type: ToastType): CSSProperties => ({
   top: 18,
   right: 18,
   zIndex: 1400,
-  background:
-    type === "success" ? "#10b981" : type === "error" ? "#ef4444" : "#2563eb",
+  background: type === "success" ? "#10b981" : type === "error" ? "#ef4444" : "#2563eb",
   color: "white",
   padding: "10px 14px",
   borderRadius: 12,
@@ -1323,7 +1193,6 @@ const sectionTitle: CSSProperties = {
   fontSize: 20,
   fontWeight: 900,
   color: "#0f172a",
-  letterSpacing: "-0.02em",
 };
 
 const sectionSubtitle: CSSProperties = {
