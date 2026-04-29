@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Head from "next/head";                                               // ✅ added
 import { supabase } from "@/lib/supabase";
 
 type JobRow = {
@@ -203,170 +204,197 @@ export default function JobsPage() {
     return { total, taskBased, remote, companies };
   }, [jobs]);
 
+  // ✅ Structured data for the list of jobs (ItemList)
+  const structuredData = useMemo(() => {
+    if (!jobs.length) return null;
+    const items = jobs.slice(0, 10).map((job, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      url: `https://ofskilljobs.vercel.app/jobs/${job.slug}`,
+      name: job.title,
+    }));
+    return {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      itemListElement: items,
+      numberOfItems: jobs.length,
+    };
+  }, [jobs]);
+
   function handleViewAndApply(slug: string) {
     router.push(`/jobs/${slug}`);
   }
 
   return (
-    <div style={pageShell}>
-      <div className="hero-card" style={heroCard}>
-        <div style={heroLeft}>
-          <p style={eyebrow}>Public jobs</p>
-          <h1 style={pageTitle}>Show skills, get hired</h1>
-          <p style={pageSubtitle}>
-            Browse active job posts, review task requirements, and apply with a Google
-            Drive submission link. Clean, task-based hiring for modern companies.
-          </p>
+    <>
+      {structuredData && (
+        <Head>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          />
+        </Head>
+      )}
+      <div style={pageShell}>
+        <div className="hero-card" style={heroCard}>
+          <div style={heroLeft}>
+            <p style={eyebrow}>Public jobs</p>
+            <h1 style={pageTitle}>Show skills, get hired</h1>
+            <p style={pageSubtitle}>
+              Browse active job posts, review task requirements, and apply with a Google
+              Drive submission link. Clean, task-based hiring for modern companies.
+            </p>
 
-          <div style={heroActions}>
-            <button type="button" style={ghostHeroBtn} onClick={() => router.push("/")}>
-              Back to home
-            </button>
+            <div style={heroActions}>
+              <button type="button" style={ghostHeroBtn} onClick={() => router.push("/")}>
+                Back to home
+              </button>
+            </div>
+          </div>
+
+          <div className="stats-grid" style={heroStats}>
+            <StatBox label="Active jobs" value={String(stats.total)} />
+            <StatBox label="Task-based roles" value={String(stats.taskBased)} />
+            <StatBox label="Remote jobs" value={String(stats.remote)} />
+            <StatBox label="Companies hiring" value={String(stats.companies)} />
           </div>
         </div>
 
-        <div className="stats-grid" style={heroStats}>
-          <StatBox label="Active jobs" value={String(stats.total)} />
-          <StatBox label="Task-based roles" value={String(stats.taskBased)} />
-          <StatBox label="Remote jobs" value={String(stats.remote)} />
-          <StatBox label="Companies hiring" value={String(stats.companies)} />
-        </div>
-      </div>
+        <div style={toolbar}>
+          <div style={searchWrap}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by title, role, location, company..."
+              style={searchInput}
+            />
+          </div>
 
-      <div style={toolbar}>
-        <div style={searchWrap}>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by title, role, location, company..."
-            style={searchInput}
-          />
+          <button type="button" onClick={loadJobs} style={refreshBtn}>
+            Refresh
+          </button>
         </div>
 
-        <button type="button" onClick={loadJobs} style={refreshBtn}>
-          Refresh
-        </button>
-      </div>
+        {loading ? (
+          <div style={loadingCard}>
+            <div style={loadingSpinner} />
+            <h2 style={{ margin: "16px 0 0", color: "#0f172a" }}>Loading jobs...</h2>
+            <p style={{ margin: "8px 0 0", color: "#64748b" }}>
+              Finding the latest active opportunities.
+            </p>
+          </div>
+        ) : filteredJobs.length ? (
+          <div style={grid}>
+            {filteredJobs.map((job) => {
+              const expired =
+                !!job.expires_at && new Date(job.expires_at).getTime() <= Date.now();
+              const alreadyApplied = appliedJobIds.includes(job.id);
 
-      {loading ? (
-        <div style={loadingCard}>
-          <div style={loadingSpinner} />
-          <h2 style={{ margin: "16px 0 0", color: "#0f172a" }}>Loading jobs...</h2>
-          <p style={{ margin: "8px 0 0", color: "#64748b" }}>
-            Finding the latest active opportunities.
-          </p>
-        </div>
-      ) : filteredJobs.length ? (
-        <div style={grid}>
-          {filteredJobs.map((job) => {
-            const expired =
-              !!job.expires_at && new Date(job.expires_at).getTime() <= Date.now();
-            const alreadyApplied = appliedJobIds.includes(job.id);
+              return (
+                <div key={job.id} style={jobCard}>
+                  <div style={jobTopRow}>
+                    <div style={companyBadge}>
+                      {job.company_logo_url ? (
+                        <img
+                          src={job.company_logo_url}
+                          alt={job.company_name}
+                          style={companyLogo}
+                        />
+                      ) : (
+                        <div style={companyLogoFallback}>
+                          {job.company_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
 
-            return (
-              <div key={job.id} style={jobCard}>
-                <div style={jobTopRow}>
-                  <div style={companyBadge}>
-                    {job.company_logo_url ? (
-                      <img
-                        src={job.company_logo_url}
-                        alt={job.company_name}
-                        style={companyLogo}
-                      />
-                    ) : (
-                      <div style={companyLogoFallback}>
-                        {job.company_name.charAt(0).toUpperCase()}
+                      <div style={{ minWidth: 0 }}>
+                        <p style={companyName}>{job.company_name}</p>
+                        <p style={companyMeta}>
+                          {job.company_industry || "Company"}
+                          {job.location ? ` • ${job.location}` : ""}
+                        </p>
                       </div>
-                    )}
-
-                    <div style={{ minWidth: 0 }}>
-                      <p style={companyName}>{job.company_name}</p>
-                      <p style={companyMeta}>
-                        {job.company_industry || "Company"}
-                        {job.location ? ` • ${job.location}` : ""}
-                      </p>
                     </div>
+
+                    <span style={statusPill(expired ? "closed" : "open")}>
+                      {expired ? "Expired" : "Open"}
+                    </span>
                   </div>
 
-                  <span style={statusPill(expired ? "closed" : "open")}>
-                    {expired ? "Expired" : "Open"}
-                  </span>
+                  <h2 style={jobTitle}>{job.title}</h2>
+
+                  <p style={jobRole}>
+                    {job.role_type || "Role"}{" "}
+                    {job.is_remote ? "• Remote" : "• On-site / Hybrid"}
+                  </p>
+
+                  {/* Description area – pushes button down */}
+                  <div style={jobDescription}>
+                    {job.description.length > 180
+                      ? `${job.description.slice(0, 180)}...`
+                      : job.description}
+                  </div>
+
+                  <div style={pillRow}>
+                    <span style={pill}>
+                      {job.salary_min || job.salary_max
+                        ? `${job.salary_min ? `₹${job.salary_min}` : "₹—"} - ${
+                            job.salary_max ? `₹${job.salary_max}` : "₹—"
+                          }`
+                        : "Salary confidential"}
+                    </span>
+
+                    <span style={pill}>
+                      {job.task_required ? "Task required" : "No task"}
+                    </span>
+
+                    <span style={pill}>
+                      {job.expires_at
+                        ? `Expires ${new Date(job.expires_at).toLocaleDateString()}`
+                        : "No expiry set"}
+                    </span>
+
+                    {alreadyApplied && <span style={appliedPill}>Applied ✓</span>}
+                  </div>
+
+                  <div style={cardActions}>
+                    <button
+                      type="button"
+                      style={primaryBtn}
+                      onClick={() => handleViewAndApply(job.slug)}
+                    >
+                      {alreadyApplied ? "Already Applied" : "View & Apply"}
+                    </button>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={emptyCard}>
+            <h2 style={{ margin: 0, color: "#0f172a" }}>No matching jobs found</h2>
+            <p style={{ margin: "8px 0 0", color: "#64748b" }}>
+              Try a different search term or check back later.
+            </p>
+          </div>
+        )}
 
-                <h2 style={jobTitle}>{job.title}</h2>
-
-                <p style={jobRole}>
-                  {job.role_type || "Role"}{" "}
-                  {job.is_remote ? "• Remote" : "• On-site / Hybrid"}
-                </p>
-
-                {/* ✅ Description area – will push button down */}
-                <div style={jobDescription}>
-                  {job.description.length > 180
-                    ? `${job.description.slice(0, 180)}...`
-                    : job.description}
-                </div>
-
-                <div style={pillRow}>
-                  <span style={pill}>
-                    {job.salary_min || job.salary_max
-                      ? `${job.salary_min ? `₹${job.salary_min}` : "₹—"} - ${
-                          job.salary_max ? `₹${job.salary_max}` : "₹—"
-                        }`
-                      : "Salary confidential"}
-                  </span>
-
-                  <span style={pill}>
-                    {job.task_required ? "Task required" : "No task"}
-                  </span>
-
-                  <span style={pill}>
-                    {job.expires_at
-                      ? `Expires ${new Date(job.expires_at).toLocaleDateString()}`
-                      : "No expiry set"}
-                  </span>
-
-                  {alreadyApplied && <span style={appliedPill}>Applied ✓</span>}
-                </div>
-
-                <div style={cardActions}>
-                  <button
-                    type="button"
-                    style={primaryBtn}
-                    onClick={() => handleViewAndApply(job.slug)}
-                  >
-                    {alreadyApplied ? "Already Applied" : "View & Apply"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div style={emptyCard}>
-          <h2 style={{ margin: 0, color: "#0f172a" }}>No matching jobs found</h2>
-          <p style={{ margin: "8px 0 0", color: "#64748b" }}>
-            Try a different search term or check back later.
-          </p>
-        </div>
-      )}
-
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .hero-card {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 20px !important;
+        <style jsx>{`
+          @media (max-width: 768px) {
+            .hero-card {
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 20px !important;
+            }
+            .stats-grid {
+              width: 100% !important;
+              grid-template-columns: repeat(2, 1fr) !important;
+              gap: 12px !important;
+              min-height: 110px;
+            }
           }
-          .stats-grid {
-            width: 100% !important;
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 12px !important;
-            min-height: 110px;
-          }
-        }
-      `}</style>
-    </div>
+        `}</style>
+      </div>
+    </>
   );
 }
 
@@ -379,6 +407,8 @@ function StatBox({ label, value }: { label: string; value: string }) {
   );
 }
 
+// All style definitions remain exactly the same as in the original file.
+// (They are unchanged – omitted for brevity but must be present.)
 const pageShell: React.CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",
@@ -545,7 +575,7 @@ const jobCard: React.CSSProperties = {
   border: "1px solid #eef2f7",
   display: "flex",
   flexDirection: "column",
-  height: "100%",           // make all cards same height
+  height: "100%",
 };
 
 const jobTopRow: React.CSSProperties = {
@@ -634,7 +664,7 @@ const jobDescription: React.CSSProperties = {
   margin: "14px 0 0",
   color: "#475569",
   lineHeight: 1.8,
-  flexGrow: 1,            // pushes the button to bottom
+  flexGrow: 1,
 };
 
 const pillRow: React.CSSProperties = {

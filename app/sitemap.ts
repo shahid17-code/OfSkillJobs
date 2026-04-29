@@ -13,19 +13,23 @@ function getLastModified(dateStr: string | null | undefined): Date {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Static routes
+  // Static routes (including all public informational pages)
   const staticRoutes = [
     "",
     "/jobs",
     "/challenges",
     "/leaderboard",
+    "/about",
+    "/contact",
+    "/privacy",
+    "/terms",
     "/login",
     "/signup",
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
-    changeFrequency: "daily" as const,
-    priority: route === "" ? 1.0 : 0.8,
+    changeFrequency: route === "" ? "daily" as const : "weekly" as const,
+    priority: route === "" ? 1.0 : 0.7,
   }));
 
   // Dynamic job routes
@@ -38,23 +42,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${baseUrl}/jobs/${job.slug}`,
     lastModified: getLastModified(job.updated_at || job.created_at),
     changeFrequency: "daily" as const,
-    priority: 0.7,
+    priority: 0.8,
   }));
 
-  // Candidate profile routes
+  //  Public developer profiles ( /u/[username] )
   const { data: developers } = await supabase
     .from("users")
-    .select("id, updated_at, created_at")
-    .eq("role", "developer");
+    .select("username, updated_at, created_at")
+    .eq("role", "developer")
+    .not("username", "is", null);       // only those with a username set
 
-  const candidateRoutes = (developers || []).map((dev) => ({
-    url: `${baseUrl}/candidate/${dev.id}`,
+  const developerRoutes = (developers || []).map((dev) => ({
+    url: `${baseUrl}/u/${dev.username}`,
     lastModified: getLastModified(dev.updated_at || dev.created_at),
     changeFrequency: "weekly" as const,
     priority: 0.6,
   }));
 
-  // Company profile routes
+  // Public company profiles ( /company/[username] )
   const { data: companies } = await supabase
     .from("users")
     .select("username, updated_at, created_at")
@@ -68,16 +73,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  // Challenge routes
+  // Challenge pages
   const { data: challenges } = await supabase
     .from("challenges")
     .select("id, updated_at, created_at");
 
   const challengeRoutes = (challenges || []).map((challenge) => ({
     url: `${baseUrl}/challenges/${challenge.id}`,
-    lastModified: getLastModified(
-      challenge.updated_at || challenge.created_at
-    ),
+    lastModified: getLastModified(challenge.updated_at || challenge.created_at),
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }));
@@ -85,7 +88,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticRoutes,
     ...jobRoutes,
-    ...candidateRoutes,
+    ...developerRoutes,
     ...companyRoutes,
     ...challengeRoutes,
   ];

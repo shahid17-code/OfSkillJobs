@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, FormEvent, ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Head from "next/head";                                            // ✅ added for JSON-LD
 import { supabase } from "@/lib/supabase";
 import { awardPoints } from "@/lib/points";
 
@@ -184,6 +185,50 @@ export default function JobDetailPage() {
     return `${min} - ${max}`;
   }, [job]);
 
+  // ✅ Structured data for JobPosting (SEO)
+  const structuredData = useMemo(() => {
+    if (!job || !company) return null;
+    const data: any = {
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      title: job.title,
+      description: job.description,
+      datePosted: job.created_at ? job.created_at.split("T")[0] : undefined,
+      validThrough: job.expires_at ? job.expires_at.split("T")[0] : undefined,
+      employmentType: job.role_type ? job.role_type.toUpperCase() : undefined,
+      hiringOrganization: {
+        "@type": "Organization",
+        name: company.company_name,
+        sameAs: company.website,
+      },
+      jobLocation: {
+        "@type": "Place",
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: job.location,
+        },
+      },
+      identifier: {
+        "@type": "PropertyValue",
+        name: "OfSkillJob",
+        value: job.id,
+      },
+    };
+    // optionally add salary if both min and max are present
+    if (job.salary_min && job.salary_max) {
+      data.baseSalary = {
+        "@type": "MonetaryAmount",
+        currency: "INR",
+        value: {
+          "@type": "QuantitativeValue",
+          minValue: job.salary_min,
+          maxValue: job.salary_max,
+        },
+      };
+    }
+    return data;
+  }, [job, company]);
+
   async function copyText(text: string, message: string) {
     try { await navigator.clipboard.writeText(text); showToast(message, "success"); }
     catch { showToast("Failed to copy", "error"); }
@@ -307,375 +352,384 @@ export default function JobDetailPage() {
   const showReadMoreDesc = isMobile && (job.description?.length || 0) > 300;
 
   return (
-    <div style={pageShell}>
-      <div
-        className="job-hero"
-        style={{
-          ...heroCard,
-          backgroundImage: company?.cover_url
-            ? `linear-gradient(135deg, rgba(255,255,255,0.96), rgba(241,245,249,0.98)), url(${company.cover_url})`
-            : "linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)",
-        }}
-      >
-        <div className="hero-container">
-          <div className="hero-left">
-            <div className="logo-wrapper">
-              <div style={brandLogo}>
-                {company?.logo_url ? (
-                  <img
-                    src={company.logo_url}
-                    alt={company?.company_name || "Company"}
-                    style={brandLogoImg}
-                  />
-                ) : (
-                  <div style={brandFallback}>
-                    {(company?.company_name || "C").charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="job-details">
-              <p style={eyebrow}>Skill-based opportunity</p>
-              <h1 style={pageTitle} className="job-title">{job.title}</h1>
-              <p style={{ ...pageSubtitle, wordBreak: "break-word", whiteSpace: "normal", overflowWrap: "break-word" }}>
-                {company?.company_name || "Company"} · {job.role_type || "Role"} ·{" "}
-                {job.location || "Location not set"}
-              </p>
-              <div style={metaPills}>
-                <span style={statusPill(expired ? "closed" : "open")}>
-                  {expired ? "Closed" : "Open"}
-                </span>
-                <span style={metaChip}>
-                  {job.is_remote ? "Remote" : "On-site / Hybrid"}
-                </span>
-                <span style={metaChip}>{salaryText}</span>
-                {alreadyApplied && (
-                  <span style={alreadyAppliedChip}>Already applied ✅</span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="hero-actions">
-            {company?.username && (
-              <button
-                type="button"
-                style={ghostBtn}
-                onClick={() => router.push(`/company/${company.username}`)}
-              >
-                View Company
-              </button>
-            )}
-            <button
-              type="button"
-              style={ghostBtn}
-              onClick={() => copyText(shareUrl, "Job link copied")}
-            >
-              Copy Job Link
-            </button>
-            <button type="button" style={primaryBtn} onClick={() => router.push("/jobs")}>
-              Browse More Jobs
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div style={layoutGrid}>
-        <section style={mainColumn}>
-          <div style={premiumCard}>
-            <SectionHeader
-              title="About this role"
-              subtitle="A clear view of what the company needs"
-            />
-            <div>
-              <div style={{ ...bodyText, whiteSpace: "pre-wrap" }}>{descToShow}</div>
-              {showReadMoreDesc && (
-                <button
-                  onClick={() => setDescExpanded(!descExpanded)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#2563eb",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    marginTop: 8,
-                    padding: 0,
-                    textDecoration: "underline",
-                  }}
-                >
-                  {descExpanded ? "Read less" : "Read more"}
-                </button>
-              )}
-            </div>
-
-            <div style={detailGrid}>
-              <InfoBox label="Task-based hiring" value={job.task_required ? "Yes" : "No"} />
-              <InfoBox
-                label="Expiry"
-                value={job.expires_at ? new Date(job.expires_at).toLocaleDateString() : "No expiry"}
-              />
-              <InfoBox label="Location" value={job.location || "Not set"} />
-              <InfoBox
-                label="Work mode"
-                value={job.is_remote ? "Remote" : "On-site / Hybrid"}
-              />
-            </div>
-          </div>
-
-          {job.task_required && (
-            <div style={premiumCard}>
-              <SectionHeader
-                title="Skill task"
-                subtitle="This is how the company evaluates real ability"
-              />
-              <div style={taskCard}>
-                <div style={taskHeader}>
-                  <div>
-                    <h3 style={taskTitle}>{job.task_title || "Task"}</h3>
-                    <p style={taskSubtitle}>
-                      Read carefully, complete the task, and submit your links below.
-                    </p>
-                  </div>
-                  <span style={taskBadge}>{job.task_type || "custom"}</span>
-                </div>
-
-                <pre style={taskText}>
-                  {job.task_instructions || "No instructions provided."}
-                </pre>
-              </div>
-            </div>
-          )}
-
-          <div style={premiumCard}>
-            <SectionHeader
-              title="Company snapshot"
-              subtitle="A quick look at who you are applying to"
-            />
-
-            <div style={companyCard}>
-              <div style={companyTopRow}>
-                <div style={companyAvatar}>
+    <>
+      {structuredData && (
+        <Head>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          />
+        </Head>
+      )}
+      <div style={pageShell}>
+        <div
+          className="job-hero"
+          style={{
+            ...heroCard,
+            backgroundImage: company?.cover_url
+              ? `linear-gradient(135deg, rgba(255,255,255,0.96), rgba(241,245,249,0.98)), url(${company.cover_url})`
+              : "linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)",
+          }}
+        >
+          <div className="hero-container">
+            <div className="hero-left">
+              <div className="logo-wrapper">
+                <div style={brandLogo}>
                   {company?.logo_url ? (
                     <img
                       src={company.logo_url}
                       alt={company?.company_name || "Company"}
-                      style={companyAvatarImg}
+                      style={brandLogoImg}
                     />
                   ) : (
-                    <div style={companyAvatarFallback}>
+                    <div style={brandFallback}>
                       {(company?.company_name || "C").charAt(0).toUpperCase()}
                     </div>
                   )}
                 </div>
-
-                <div style={{ flex: 1 }}>
-                  <h3 style={companyName}>{company?.company_name || "Company"}</h3>
-                  <p style={companyMeta}>
-                    {company?.industry || "Industry not set"}
-                    {company?.location ? ` • ${company.location}` : ""}
-                  </p>
-                  <div>
-                    <p style={companyBio}>{bioToShow}</p>
-                    {showReadMoreBio && (
-                      <button
-                        onClick={() => setBioExpanded(!bioExpanded)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#2563eb",
-                          cursor: "pointer",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          marginTop: 4,
-                          padding: 0,
-                          textDecoration: "underline",
-                        }}
-                      >
-                        {bioExpanded ? "Read less" : "Read more"}
-                      </button>
-                    )}
-                  </div>
+              </div>
+              <div className="job-details">
+                <p style={eyebrow}>Skill-based opportunity</p>
+                <h1 style={pageTitle} className="job-title">{job.title}</h1>
+                <p style={{ ...pageSubtitle, wordBreak: "break-word", whiteSpace: "normal", overflowWrap: "break-word" }}>
+                  {company?.company_name || "Company"} · {job.role_type || "Role"} ·{" "}
+                  {job.location || "Location not set"}
+                </p>
+                <div style={metaPills}>
+                  <span style={statusPill(expired ? "closed" : "open")}>
+                    {expired ? "Closed" : "Open"}
+                  </span>
+                  <span style={metaChip}>
+                    {job.is_remote ? "Remote" : "On-site / Hybrid"}
+                  </span>
+                  <span style={metaChip}>{salaryText}</span>
+                  {alreadyApplied && (
+                    <span style={alreadyAppliedChip}>Already applied ✅</span>
+                  )}
                 </div>
               </div>
+            </div>
+            <div className="hero-actions">
+              {company?.username && (
+                <button
+                  type="button"
+                  style={ghostBtn}
+                  onClick={() => router.push(`/company/${company.username}`)}
+                >
+                  View Company
+                </button>
+              )}
+              <button
+                type="button"
+                style={ghostBtn}
+                onClick={() => copyText(shareUrl, "Job link copied")}
+              >
+                Copy Job Link
+              </button>
+              <button type="button" style={primaryBtn} onClick={() => router.push("/jobs")}>
+                Browse More Jobs
+              </button>
+            </div>
+          </div>
+        </div>
 
-              <div style={companyLinks}>
-                {company?.website && (
-                  <a href={company.website} target="_blank" rel="noreferrer" style={linkPill}>
-                    Website
-                  </a>
-                )}
-                {company?.email ? (
-                  <a
-                    href={`mailto:${company.email}`}
-                    style={linkPill}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setTimeout(() => {
-                        window.location.href = `mailto:${company.email}`;
-                      }, 100);
+        <div style={layoutGrid}>
+          <section style={mainColumn}>
+            <div style={premiumCard}>
+              <SectionHeader
+                title="About this role"
+                subtitle="A clear view of what the company needs"
+              />
+              <div>
+                <div style={{ ...bodyText, whiteSpace: "pre-wrap" }}>{descToShow}</div>
+                {showReadMoreDesc && (
+                  <button
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#2563eb",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      marginTop: 8,
+                      padding: 0,
+                      textDecoration: "underline",
                     }}
                   >
-                    Email
-                  </a>
-                ) : (
-                  <span style={{ ...linkPill, opacity: 0.5, cursor: "default" }}>Email not available</span>
-                )}
-                {company?.username && (
-                  <button
-                    type="button"
-                    style={linkPillBtn}
-                    onClick={() => router.push(`/company/${company.username}`)}
-                  >
-                    Public Profile
+                    {descExpanded ? "Read less" : "Read more"}
                   </button>
                 )}
               </div>
-            </div>
-          </div>
-        </section>
 
-        <aside style={sideColumn}>
-          <div style={stickyStack}>
-            <div style={applyCard}>
+              <div style={detailGrid}>
+                <InfoBox label="Task-based hiring" value={job.task_required ? "Yes" : "No"} />
+                <InfoBox
+                  label="Expiry"
+                  value={job.expires_at ? new Date(job.expires_at).toLocaleDateString() : "No expiry"}
+                />
+                <InfoBox label="Location" value={job.location || "Not set"} />
+                <InfoBox
+                  label="Work mode"
+                  value={job.is_remote ? "Remote" : "On-site / Hybrid"}
+                />
+              </div>
+            </div>
+
+            {job.task_required && (
+              <div style={premiumCard}>
+                <SectionHeader
+                  title="Skill task"
+                  subtitle="This is how the company evaluates real ability"
+                />
+                <div style={taskCard}>
+                  <div style={taskHeader}>
+                    <div>
+                      <h3 style={taskTitle}>{job.task_title || "Task"}</h3>
+                      <p style={taskSubtitle}>
+                        Read carefully, complete the task, and submit your links below.
+                      </p>
+                    </div>
+                    <span style={taskBadge}>{job.task_type || "custom"}</span>
+                  </div>
+
+                  <pre style={taskText}>
+                    {job.task_instructions || "No instructions provided."}
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            <div style={premiumCard}>
               <SectionHeader
-                title="Apply now"
-                subtitle={
-                  useExternalApply
-                    ? "This job is curated by OfSkillJob. You will apply directly on the employer's website."
-                    : alreadyApplied
-                    ? "You have already submitted an application for this job."
-                    : authUser
-                    ? "Your details can be auto-filled and your submission will go straight to the company."
-                    : "Sign in to auto-fill your details and submit your application."
-                }
+                title="Company snapshot"
+                subtitle="A quick look at who you are applying to"
               />
 
-              {alreadyApplied && !useExternalApply && (
-                <div style={alreadyAppliedBanner}>
-                  <strong style={{ display: "block", marginBottom: 4 }}>
-                    Already applied
-                  </strong>
-                  <span>
-                    You already submitted an application for this role. You can still copy
-                    the job link, view the company, or browse more opportunities.
-                  </span>
-                </div>
-              )}
+              <div style={companyCard}>
+                <div style={companyTopRow}>
+                  <div style={companyAvatar}>
+                    {company?.logo_url ? (
+                      <img
+                        src={company.logo_url}
+                        alt={company?.company_name || "Company"}
+                        style={companyAvatarImg}
+                      />
+                    ) : (
+                      <div style={companyAvatarFallback}>
+                        {(company?.company_name || "C").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
 
-              {useExternalApply ? (
-                <div style={guestBox}>
-                  <p style={guestText}>
-                    This job is hosted by <strong>{company?.company_name || "the employer"}</strong>.
-                    Click the button below to apply directly on their website.
-                  </p>
-                  <div style={guestActions}>
-                    <a
-                      href={job.external_apply_url!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}
-                    >
-                      Apply via OfSkillJob →
+                  <div style={{ flex: 1 }}>
+                    <h3 style={companyName}>{company?.company_name || "Company"}</h3>
+                    <p style={companyMeta}>
+                      {company?.industry || "Industry not set"}
+                      {company?.location ? ` • ${company.location}` : ""}
+                    </p>
+                    <div>
+                      <p style={companyBio}>{bioToShow}</p>
+                      {showReadMoreBio && (
+                        <button
+                          onClick={() => setBioExpanded(!bioExpanded)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#2563eb",
+                            cursor: "pointer",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            marginTop: 4,
+                            padding: 0,
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {bioExpanded ? "Read less" : "Read more"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={companyLinks}>
+                  {company?.website && (
+                    <a href={company.website} target="_blank" rel="noreferrer" style={linkPill}>
+                      Website
                     </a>
-                  </div>
+                  )}
+                  {company?.email ? (
+                    <a
+                      href={`mailto:${company.email}`}
+                      style={linkPill}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setTimeout(() => {
+                          window.location.href = `mailto:${company.email}`;
+                        }, 100);
+                      }}
+                    >
+                      Email
+                    </a>
+                  ) : (
+                    <span style={{ ...linkPill, opacity: 0.5, cursor: "default" }}>Email not available</span>
+                  )}
+                  {company?.username && (
+                    <button
+                      type="button"
+                      style={linkPillBtn}
+                      onClick={() => router.push(`/company/${company.username}`)}
+                    >
+                      Public Profile
+                    </button>
+                  )}
                 </div>
-              ) : authUser ? (
-                <form onSubmit={handleSubmit} style={formGrid}>
-                  <Field label="Full name *">
-                    <input
-                      name="applicant_name"
-                      value={form.applicant_name}
-                      onChange={handleChange}
-                      placeholder="Your name"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Email *">
-                    <input
-                      name="applicant_email"
-                      value={form.applicant_email}
-                      onChange={handleChange}
-                      placeholder="your@email.com"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Phone">
-                    <input
-                      name="applicant_phone"
-                      value={form.applicant_phone}
-                      onChange={handleChange}
-                      placeholder="Phone number"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Resume link *">
-                    <input
-                      name="resume_link"
-                      value={form.resume_link}
-                      onChange={handleChange}
-                      placeholder="Resume / portfolio link"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Google Drive link *">
-                    <input
-                      name="drive_link"
-                      value={form.drive_link}
-                      onChange={handleChange}
-                      placeholder="Drive folder link"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Note">
-                    <textarea
-                      name="note"
-                      value={form.note}
-                      onChange={handleChange}
-                      placeholder="Short note"
-                      style={textarea}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <button
-                    type="submit"
-                    style={submitBtn}
-                    disabled={submitting || expired || alreadyApplied}
-                  >
-                    {submitting ? "Submitting..." : alreadyApplied ? "Already Applied" : expired ? "Job Closed" : "Submit Application"}
-                  </button>
-                </form>
-              ) : (
-                <div style={guestBox}>
-                  <p style={guestText}>Sign up or log in to apply.</p>
-                  <div style={guestActions}>
-                    <button style={primaryBtn} onClick={() => router.push("/signup")}>Sign up</button>
-                    <button style={ghostBtn} onClick={() => router.push("/login")}>Log in</button>
+              </div>
+            </div>
+          </section>
+
+          <aside style={sideColumn}>
+            <div style={stickyStack}>
+              <div style={applyCard}>
+                <SectionHeader
+                  title="Apply now"
+                  subtitle={
+                    useExternalApply
+                      ? "This job is curated by OfSkillJob. You will apply directly on the employer's website."
+                      : alreadyApplied
+                      ? "You have already submitted an application for this job."
+                      : authUser
+                      ? "Your details can be auto-filled and your submission will go straight to the company."
+                      : "Sign in to auto-fill your details and submit your application."
+                  }
+                />
+
+                {alreadyApplied && !useExternalApply && (
+                  <div style={alreadyAppliedBanner}>
+                    <strong style={{ display: "block", marginBottom: 4 }}>
+                      Already applied
+                    </strong>
+                    <span>
+                      You already submitted an application for this role. You can still copy
+                      the job link, view the company, or browse more opportunities.
+                    </span>
                   </div>
-                </div>
-              )}
+                )}
+
+                {useExternalApply ? (
+                  <div style={guestBox}>
+                    <p style={guestText}>
+                      This job is hosted by <strong>{company?.company_name || "the employer"}</strong>.
+                      Click the button below to apply directly on their website.
+                    </p>
+                    <div style={guestActions}>
+                      <a
+                        href={job.external_apply_url!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}
+                      >
+                        Apply via OfSkillJob →
+                      </a>
+                    </div>
+                  </div>
+                ) : authUser ? (
+                  <form onSubmit={handleSubmit} style={formGrid}>
+                    <Field label="Full name *">
+                      <input
+                        name="applicant_name"
+                        value={form.applicant_name}
+                        onChange={handleChange}
+                        placeholder="Your name"
+                        style={input}
+                        disabled={alreadyApplied}
+                      />
+                    </Field>
+                    <Field label="Email *">
+                      <input
+                        name="applicant_email"
+                        value={form.applicant_email}
+                        onChange={handleChange}
+                        placeholder="your@email.com"
+                        style={input}
+                        disabled={alreadyApplied}
+                      />
+                    </Field>
+                    <Field label="Phone">
+                      <input
+                        name="applicant_phone"
+                        value={form.applicant_phone}
+                        onChange={handleChange}
+                        placeholder="Phone number"
+                        style={input}
+                        disabled={alreadyApplied}
+                      />
+                    </Field>
+                    <Field label="Resume link *">
+                      <input
+                        name="resume_link"
+                        value={form.resume_link}
+                        onChange={handleChange}
+                        placeholder="Resume / portfolio link"
+                        style={input}
+                        disabled={alreadyApplied}
+                      />
+                    </Field>
+                    <Field label="Google Drive link *">
+                      <input
+                        name="drive_link"
+                        value={form.drive_link}
+                        onChange={handleChange}
+                        placeholder="Drive folder link"
+                        style={input}
+                        disabled={alreadyApplied}
+                      />
+                    </Field>
+                    <Field label="Note">
+                      <textarea
+                        name="note"
+                        value={form.note}
+                        onChange={handleChange}
+                        placeholder="Short note"
+                        style={textarea}
+                        disabled={alreadyApplied}
+                      />
+                    </Field>
+                    <button
+                      type="submit"
+                      style={submitBtn}
+                      disabled={submitting || expired || alreadyApplied}
+                    >
+                      {submitting ? "Submitting..." : alreadyApplied ? "Already Applied" : expired ? "Job Closed" : "Submit Application"}
+                    </button>
+                  </form>
+                ) : (
+                  <div style={guestBox}>
+                    <p style={guestText}>Sign up or log in to apply.</p>
+                    <div style={guestActions}>
+                      <button style={primaryBtn} onClick={() => router.push("/signup")}>Sign up</button>
+                      <button style={ghostBtn} onClick={() => router.push("/login")}>Log in</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={tipsCard}>
+                <SectionHeader title="Submission tips" subtitle="A strong application looks clear" />
+                <ul style={tipsList}>
+                  <li>Use one Drive folder with access enabled.</li>
+                  <li>Keep your note short and specific.</li>
+                  <li>Make sure the links open without permission issues.</li>
+                  <li>Submit the exact task the company asked for.</li>
+                </ul>
+              </div>
             </div>
+          </aside>
+        </div>
 
-            <div style={tipsCard}>
-              <SectionHeader title="Submission tips" subtitle="A strong application looks clear" />
-              <ul style={tipsList}>
-                <li>Use one Drive folder with access enabled.</li>
-                <li>Keep your note short and specific.</li>
-                <li>Make sure the links open without permission issues.</li>
-                <li>Submit the exact task the company asked for.</li>
-              </ul>
-            </div>
-          </div>
-        </aside>
-      </div>
+        {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
 
-      {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
-
-      <style>{`
+        <style>{`
   .job-title {
     word-break: break-word !important;
     white-space: normal !important;
@@ -703,11 +757,12 @@ export default function JobDetailPage() {
     .hero-actions { display: flex; gap: 12px; }
   }
 `}</style>
-    </div>
+      </div>
+    </>
   );
 }
 
-// Helper components
+// Helper components (unchanged)
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -735,7 +790,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// Style objects
+// All style objects remain exactly as in the original (they are unchanged)
 const pageShell: CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",

@@ -9,8 +9,8 @@ Allow: /about$
 Allow: /contact$
 Allow: /privacy$
 Allow: /terms$
-Allow: /u/ *
-Allow: /company/ *
+Allow: /u/*
+Allow: /company/*
 Disallow: /profile/edit/
 Disallow: /company/profile/edit/
 Disallow: /company/dashboard/
