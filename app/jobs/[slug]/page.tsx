@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import JobDetailClient from "./JobDetailClient";
 
 // Generate static paths for all active jobs
@@ -47,6 +47,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  // ✅ Redirect companies away from job detail pages
+  if (user) {
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    if (userData?.role === "company") {
+      redirect("/company/dashboard");
+    }
+  }
+
   // Build structured data (JobPosting) with all recommended fields
   const structuredData: any = {
     "@context": "https://schema.org",
@@ -65,8 +77,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
       address: {
         "@type": "PostalAddress",
         addressLocality: job.location,
-        addressCountry: "IN",           // ✅ fixed missing country
-        // addressRegion and streetAddress are optional – we don't have the data
+        addressCountry: "IN",
       },
     },
     identifier: {
@@ -76,12 +87,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
     },
   };
 
-  // Add validThrough only if the job has an expiry date (optional)
   if (job.expires_at) {
     structuredData.validThrough = job.expires_at.split("T")[0];
   }
 
-  // Add salary details including unitText
   if (job.salary_min && job.salary_max) {
     structuredData.baseSalary = {
       "@type": "MonetaryAmount",
@@ -90,7 +99,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
         "@type": "QuantitativeValue",
         minValue: job.salary_min,
         maxValue: job.salary_max,
-        unitText: "MONTH",            // ✅ fixed missing unitText (monthly salary)
+        unitText: "MONTH",
       },
     };
   }

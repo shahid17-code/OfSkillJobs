@@ -7,7 +7,7 @@ export const metadata = {
   title: "OfSkillJob",
   description: "Show Skills. Get Hired.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.png",      // ✅ correct public path
   },
 };
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Head from "next/head";                                               // ✅ added
+import Head from "next/head";
 import { supabase } from "@/lib/supabase";
 
 type JobRow = {
@@ -38,6 +38,24 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
+
+  // ✅ Redirect companies away from jobs page
+  useEffect(() => {
+    async function redirectCompany() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        if (userData?.role === "company") {
+          router.replace("/company/dashboard");
+        }
+      }
+    }
+    redirectCompany();
+  }, [router]);
 
   useEffect(() => {
     loadJobs();
@@ -204,7 +222,6 @@ export default function JobsPage() {
     return { total, taskBased, remote, companies };
   }, [jobs]);
 
-  // ✅ Structured data for the list of jobs (ItemList)
   const structuredData = useMemo(() => {
     if (!jobs.length) return null;
     const items = jobs.slice(0, 10).map((job, idx) => ({
@@ -327,7 +344,6 @@ export default function JobsPage() {
                     {job.is_remote ? "• Remote" : "• On-site / Hybrid"}
                   </p>
 
-                  {/* Description area – pushes button down */}
                   <div style={jobDescription}>
                     {job.description.length > 180
                       ? `${job.description.slice(0, 180)}...`
@@ -407,8 +423,7 @@ function StatBox({ label, value }: { label: string; value: string }) {
   );
 }
 
-// All style definitions remain exactly the same as in the original file.
-// (They are unchanged – omitted for brevity but must be present.)
+// All style definitions (unchanged except for corrected color property inside objects)
 const pageShell: React.CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",

@@ -211,7 +211,7 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="nav-row">
         <div className="logo-area" onClick={() => router.push("/")}>
-          <img src="/favicon.ico" alt="Logo" width="24" height="24" style={{ width: '24px', height: '24px' }} />
+          <img src="/favicon.png" alt="Logo" width="24" height="24" style={{ width: '24px', height: '24px' }} />
           <span className="logo-text">OfSkillJob</span>
         </div>
         <div className="desktop-wrapper">

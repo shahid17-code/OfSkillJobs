@@ -332,7 +332,7 @@ function ProfileInner() {
         <body>
           ${content}
           <div class="watermark">
-            <img src="/favicon.ico" alt="OfSkillJob"> powered by OfSkillJob
+            <img src="/favicon.png" alt="OfSkillJob"> powered by OfSkillJob
           </div>
         </body>
       </html>

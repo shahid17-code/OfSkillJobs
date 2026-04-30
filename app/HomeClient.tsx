@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function HomeClient() {   // ← renamed from Home
+export default function HomeClient() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<any>(null);
@@ -58,7 +58,7 @@ export default function HomeClient() {   // ← renamed from Home
       <div style={styles.hero}>
         <div style={styles.heroContent}>
           <div style={styles.brand}>
-            <img src="/favicon.ico" alt="OfSkillJob Logo" width="48" height="48" style={{ width: '48px', height: '48px' }} />
+            <img src="/favicon.png" alt="OfSkillJob Logo" width="48" height="48" style={{ width: '48px', height: '48px' }} />
             <span style={styles.brandName}>OfSkillJob</span>
           </div>
           <h1 style={styles.heroTitle}>Show Skills. Get Hired.</h1>

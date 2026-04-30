@@ -1,9 +1,8 @@
-// app/page.tsx
 import { Metadata } from 'next';
 import HomeClient from './HomeClient';
 
 export const metadata: Metadata = {
-  title: 'OfSkillJob – Show Skills. Get Hired.',
+  title: 'OfSkillJob',
   description: 'Skill-based hiring platform for developers and professionals. Build your profile, solve challenges, apply to jobs, and get hired by top companies.',
   keywords: ['tech jobs', 'developer hiring', 'skill assessment', 'remote jobs', 'programming challenges', 'freelance', 'career platform'],
   openGraph: {
@@ -13,7 +12,7 @@ export const metadata: Metadata = {
     siteName: 'OfSkillJob',
     images: [
       {
-        url: 'https://ofskilljobs.vercel.app/og-image.png',
+        url: 'https://ofskilljobs.vercel.app/google-logo.png',
         width: 1200,
         height: 630,
         alt: 'OfSkillJob - Skill-based hiring platform',
@@ -25,7 +24,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'OfSkillJob – Show Skills. Get Hired.',
     description: 'Skill-based hiring for developers. Earn points, showcase projects, get hired.',
-    images: ['https://ofskilljobs.vercel.app/og-image.png'],
+    images: ['https://ofskilljobs.vercel.app/google-logo.png'],
   },
   alternates: {
     canonical: 'https://ofskilljobs.vercel.app',
@@ -44,5 +43,29 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <HomeClient />;
+  const orgData = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "OfSkillJob",
+    url: "https://ofskilljobs.vercel.app",
+    logo: "https://ofskilljobs.vercel.app/favicon.png",
+    sameAs: [
+      // Add your social media profiles when available
+    ],
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: "ofskilljobs@gmail.com",
+      contactType: "customer service",
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgData) }}
+      />
+      <HomeClient />
+    </>
+  );
 }
