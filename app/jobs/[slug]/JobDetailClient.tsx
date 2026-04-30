@@ -85,14 +85,12 @@ export default function JobDetailClient({
   const [descExpanded, setDescExpanded] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
-  // ✅ Real‑time auth listener (keeps user state in sync without refresh)
+  // Auth listener to keep user state in sync
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       const newUser = session?.user || null;
       setAuthUser(newUser);
-      // Reset application status when user changes
       setAlreadyApplied(false);
-      // Prefill form if user logs in
       if (newUser) {
         const metaName = newUser.user_metadata?.full_name || newUser.user_metadata?.name || "";
         setForm((prev) => ({
@@ -101,7 +99,6 @@ export default function JobDetailClient({
           applicant_email: prev.applicant_email || newUser.email || "",
         }));
       } else {
-        // Optionally clear form on logout
         setForm(initialForm);
       }
     });
@@ -123,7 +120,7 @@ export default function JobDetailClient({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Check if user has already applied
+  // Check if user already applied
   useEffect(() => {
     async function checkApplication() {
       if (!authUser?.email) return;
@@ -138,7 +135,7 @@ export default function JobDetailClient({
     checkApplication();
   }, [authUser, job?.id]);
 
-  // Prefill form with user data if available (on initial load)
+  // Prefill form with user data
   useEffect(() => {
     if (authUser) {
       const metaName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || "";
@@ -236,7 +233,6 @@ export default function JobDetailClient({
     if (fullBio.length <= 100) return fullBio;
     return fullBio.slice(0, 100) + "...";
   };
-
   const bioToShow = getBioDisplay();
   const showReadMoreBio = isMobile && (company?.about?.length || 0) > 100;
 
@@ -249,7 +245,6 @@ export default function JobDetailClient({
     const lastSpace = truncated.lastIndexOf(" ");
     return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
   };
-
   const descToShow = getDescriptionDisplay();
   const showReadMoreDesc = isMobile && (job?.description?.length || 0) > 300;
 
@@ -259,9 +254,7 @@ export default function JobDetailClient({
         <div style={loadingCard}>
           <div style={loadingSpinner} />
           <h2 style={{ margin: "16px 0 0", color: "#0f172a" }}>Loading job...</h2>
-          <p style={{ margin: "8px 0 0", color: "#64748b" }}>
-            Preparing the role details and application form.
-          </p>
+          <p style={{ margin: "8px 0 0", color: "#64748b" }}>Preparing the role details and application form.</p>
         </div>
       </div>
     );
@@ -275,18 +268,8 @@ export default function JobDetailClient({
           <p style={{ margin: "10px 0 0", color: "#64748b", lineHeight: 1.8 }}>
             This job may have been removed, closed, or the link may be incorrect.
           </p>
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              justifyContent: "center",
-              flexWrap: "wrap",
-              marginTop: 18,
-            }}
-          >
-            <button type="button" style={primaryBtn} onClick={() => router.push("/jobs")}>
-              Back to Jobs
-            </button>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 18 }}>
+            <button type="button" style={primaryBtn} onClick={() => router.push("/jobs")}>Back to Jobs</button>
           </div>
         </div>
       </div>
@@ -309,15 +292,9 @@ export default function JobDetailClient({
             <div className="logo-wrapper">
               <div style={brandLogo}>
                 {company?.logo_url ? (
-                  <img
-                    src={company.logo_url}
-                    alt={company?.company_name || "Company"}
-                    style={brandLogoImg}
-                  />
+                  <img src={company.logo_url} alt={company?.company_name || "Company"} style={brandLogoImg} />
                 ) : (
-                  <div style={brandFallback}>
-                    {(company?.company_name || "C").charAt(0).toUpperCase()}
-                  </div>
+                  <div style={brandFallback}>{(company?.company_name || "C").charAt(0).toUpperCase()}</div>
                 )}
               </div>
             </div>
@@ -325,38 +302,23 @@ export default function JobDetailClient({
               <p style={eyebrow}>Skill-based opportunity</p>
               <h1 style={pageTitle} className="job-title">{job.title}</h1>
               <p style={{ ...pageSubtitle, wordBreak: "break-word", whiteSpace: "normal", overflowWrap: "break-word" }}>
-                {company?.company_name || "Company"} · {job.role_type || "Role"} ·{" "}
-                {job.location || "Location not set"}
+                {company?.company_name || "Company"} · {job.role_type || "Role"} · {job.location || "Location not set"}
               </p>
               <div style={metaPills}>
-                <span style={statusPill(expired ? "closed" : "open")}>
-                  {expired ? "Closed" : "Open"}
-                </span>
-                <span style={metaChip}>
-                  {job.is_remote ? "Remote" : "On-site / Hybrid"}
-                </span>
+                <span style={statusPill(expired ? "closed" : "open")}>{expired ? "Closed" : "Open"}</span>
+                <span style={metaChip}>{job.is_remote ? "Remote" : "On-site / Hybrid"}</span>
                 <span style={metaChip}>{salaryText}</span>
-                {alreadyApplied && (
-                  <span style={alreadyAppliedChip}>Already applied ✅</span>
-                )}
+                {alreadyApplied && <span style={alreadyAppliedChip}>Already applied ✅</span>}
               </div>
             </div>
           </div>
           <div className="hero-actions">
             {company?.username && (
-              <button
-                type="button"
-                style={ghostBtn}
-                onClick={() => router.push(`/company/${company.username}`)}
-              >
+              <button type="button" style={ghostBtn} onClick={() => router.push(`/company/${company.username}`)}>
                 View Company
               </button>
             )}
-            <button
-              type="button"
-              style={ghostBtn}
-              onClick={() => copyText(shareUrl, "Job link copied")}
-            >
+            <button type="button" style={ghostBtn} onClick={() => copyText(shareUrl, "Job link copied")}>
               Copy Job Link
             </button>
             <button type="button" style={primaryBtn} onClick={() => router.push("/jobs")}>
@@ -369,114 +331,62 @@ export default function JobDetailClient({
       <div style={layoutGrid}>
         <section style={mainColumn}>
           <div style={premiumCard}>
-            <SectionHeader
-              title="About this role"
-              subtitle="A clear view of what the company needs"
-            />
+            <SectionHeader title="About this role" subtitle="A clear view of what the company needs" />
             <div>
               <div style={{ ...bodyText, whiteSpace: "pre-wrap" }}>{descToShow}</div>
               {showReadMoreDesc && (
                 <button
                   onClick={() => setDescExpanded(!descExpanded)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#2563eb",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    marginTop: 8,
-                    padding: 0,
-                    textDecoration: "underline",
-                  }}
+                  style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 8, textDecoration: "underline" }}
                 >
                   {descExpanded ? "Read less" : "Read more"}
                 </button>
               )}
             </div>
-
             <div style={detailGrid}>
               <InfoBox label="Task-based hiring" value={job.task_required ? "Yes" : "No"} />
-              <InfoBox
-                label="Expiry"
-                value={job.expires_at ? new Date(job.expires_at).toLocaleDateString() : "No expiry"}
-              />
+              <InfoBox label="Expiry" value={job.expires_at ? new Date(job.expires_at).toLocaleDateString() : "No expiry"} />
               <InfoBox label="Location" value={job.location || "Not set"} />
-              <InfoBox
-                label="Work mode"
-                value={job.is_remote ? "Remote" : "On-site / Hybrid"}
-              />
+              <InfoBox label="Work mode" value={job.is_remote ? "Remote" : "On-site / Hybrid"} />
             </div>
           </div>
 
           {job.task_required && (
             <div style={premiumCard}>
-              <SectionHeader
-                title="Skill task"
-                subtitle="This is how the company evaluates real ability"
-              />
+              <SectionHeader title="Skill task" subtitle="This is how the company evaluates real ability" />
               <div style={taskCard}>
                 <div style={taskHeader}>
                   <div>
                     <h3 style={taskTitle}>{job.task_title || "Task"}</h3>
-                    <p style={taskSubtitle}>
-                      Read carefully, complete the task, and submit your links below.
-                    </p>
+                    <p style={taskSubtitle}>Read carefully, complete the task, and submit your links below.</p>
                   </div>
                   <span style={taskBadge}>{job.task_type || "custom"}</span>
                 </div>
-
-                <pre style={taskText}>
-                  {job.task_instructions || "No instructions provided."}
-                </pre>
+                <pre style={taskText}>{job.task_instructions || "No instructions provided."}</pre>
               </div>
             </div>
           )}
 
           <div style={premiumCard}>
-            <SectionHeader
-              title="Company snapshot"
-              subtitle="A quick look at who you are applying to"
-            />
-
+            <SectionHeader title="Company snapshot" subtitle="A quick look at who you are applying to" />
             <div style={companyCard}>
               <div style={companyTopRow}>
                 <div style={companyAvatar}>
                   {company?.logo_url ? (
-                    <img
-                      src={company.logo_url}
-                      alt={company?.company_name || "Company"}
-                      style={companyAvatarImg}
-                    />
+                    <img src={company.logo_url} alt={company?.company_name || "Company"} style={companyAvatarImg} />
                   ) : (
-                    <div style={companyAvatarFallback}>
-                      {(company?.company_name || "C").charAt(0).toUpperCase()}
-                    </div>
+                    <div style={companyAvatarFallback}>{(company?.company_name || "C").charAt(0).toUpperCase()}</div>
                   )}
                 </div>
-
                 <div style={{ flex: 1 }}>
                   <h3 style={companyName}>{company?.company_name || "Company"}</h3>
-                  <p style={companyMeta}>
-                    {company?.industry || "Industry not set"}
-                    {company?.location ? ` • ${company.location}` : ""}
-                  </p>
+                  <p style={companyMeta}>{company?.industry || "Industry not set"}{company?.location ? ` • ${company.location}` : ""}</p>
                   <div>
                     <p style={companyBio}>{bioToShow}</p>
                     {showReadMoreBio && (
                       <button
                         onClick={() => setBioExpanded(!bioExpanded)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#2563eb",
-                          cursor: "pointer",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          marginTop: 4,
-                          padding: 0,
-                          textDecoration: "underline",
-                        }}
+                        style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 4, textDecoration: "underline" }}
                       >
                         {bioExpanded ? "Read less" : "Read more"}
                       </button>
@@ -484,37 +394,15 @@ export default function JobDetailClient({
                   </div>
                 </div>
               </div>
-
               <div style={companyLinks}>
-                {company?.website && (
-                  <a href={company.website} target="_blank" rel="noreferrer" style={linkPill}>
-                    Website
-                  </a>
-                )}
+                {company?.website && <a href={company.website} target="_blank" rel="noreferrer" style={linkPill}>Website</a>}
                 {company?.email ? (
-                  <a
-                    href={`mailto:${company.email}`}
-                    style={linkPill}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setTimeout(() => {
-                        window.location.href = `mailto:${company.email}`;
-                      }, 100);
-                    }}
-                  >
-                    Email
-                  </a>
+                  <a href={`mailto:${company.email}`} style={linkPill} onClick={(e) => { e.preventDefault(); setTimeout(() => { window.location.href = `mailto:${company.email}`; }, 100); }}>Email</a>
                 ) : (
                   <span style={{ ...linkPill, opacity: 0.5, cursor: "default" }}>Email not available</span>
                 )}
                 {company?.username && (
-                  <button
-                    type="button"
-                    style={linkPillBtn}
-                    onClick={() => router.push(`/company/${company.username}`)}
-                  >
-                    Public Profile
-                  </button>
+                  <button type="button" style={linkPillBtn} onClick={() => router.push(`/company/${company.username}`)}>Public Profile</button>
                 )}
               </div>
             </div>
@@ -536,103 +424,28 @@ export default function JobDetailClient({
                     : "Sign in to auto-fill your details and submit your application."
                 }
               />
-
               {alreadyApplied && !useExternalApply && (
                 <div style={alreadyAppliedBanner}>
-                  <strong style={{ display: "block", marginBottom: 4 }}>
-                    Already applied
-                  </strong>
-                  <span>
-                    You already submitted an application for this role. You can still copy
-                    the job link, view the company, or browse more opportunities.
-                  </span>
+                  <strong style={{ display: "block", marginBottom: 4 }}>Already applied</strong>
+                  <span>You already submitted an application for this role. You can still copy the job link, view the company, or browse more opportunities.</span>
                 </div>
               )}
-
               {useExternalApply ? (
                 <div style={guestBox}>
-                  <p style={guestText}>
-                    This job is hosted by <strong>{company?.company_name || "the employer"}</strong>.
-                    Click the button below to apply directly on their website.
-                  </p>
+                  <p style={guestText}>This job is hosted by <strong>{company?.company_name || "the employer"}</strong>. Click the button below to apply directly on their website.</p>
                   <div style={guestActions}>
-                    <a
-                      href={job.external_apply_url!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}
-                    >
-                      Apply via OfSkillJob →
-                    </a>
+                    <a href={job.external_apply_url!} target="_blank" rel="noopener noreferrer" style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}>Apply via OfSkillJob →</a>
                   </div>
                 </div>
               ) : authUser ? (
                 <form onSubmit={handleSubmit} style={formGrid}>
-                  <Field label="Full name *">
-                    <input
-                      name="applicant_name"
-                      value={form.applicant_name}
-                      onChange={handleChange}
-                      placeholder="Your name"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Email *">
-                    <input
-                      name="applicant_email"
-                      value={form.applicant_email}
-                      onChange={handleChange}
-                      placeholder="your@email.com"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Phone">
-                    <input
-                      name="applicant_phone"
-                      value={form.applicant_phone}
-                      onChange={handleChange}
-                      placeholder="Phone number"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Resume link *">
-                    <input
-                      name="resume_link"
-                      value={form.resume_link}
-                      onChange={handleChange}
-                      placeholder="Resume / portfolio link"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Google Drive link *">
-                    <input
-                      name="drive_link"
-                      value={form.drive_link}
-                      onChange={handleChange}
-                      placeholder="Drive folder link"
-                      style={input}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <Field label="Note">
-                    <textarea
-                      name="note"
-                      value={form.note}
-                      onChange={handleChange}
-                      placeholder="Short note"
-                      style={textarea}
-                      disabled={alreadyApplied}
-                    />
-                  </Field>
-                  <button
-                    type="submit"
-                    style={submitBtn}
-                    disabled={submitting || expired || alreadyApplied}
-                  >
+                  <Field label="Full name *"><input name="applicant_name" value={form.applicant_name} onChange={handleChange} placeholder="Your name" style={input} disabled={alreadyApplied} /></Field>
+                  <Field label="Email *"><input name="applicant_email" value={form.applicant_email} onChange={handleChange} placeholder="your@email.com" style={input} disabled={alreadyApplied} /></Field>
+                  <Field label="Phone"><input name="applicant_phone" value={form.applicant_phone} onChange={handleChange} placeholder="Phone number" style={input} disabled={alreadyApplied} /></Field>
+                  <Field label="Resume link *"><input name="resume_link" value={form.resume_link} onChange={handleChange} placeholder="Resume / portfolio link" style={input} disabled={alreadyApplied} /></Field>
+                  <Field label="Google Drive link *"><input name="drive_link" value={form.drive_link} onChange={handleChange} placeholder="Drive folder link" style={input} disabled={alreadyApplied} /></Field>
+                  <Field label="Note"><textarea name="note" value={form.note} onChange={handleChange} placeholder="Short note" style={textarea} disabled={alreadyApplied} /></Field>
+                  <button type="submit" style={submitBtn} disabled={submitting || expired || alreadyApplied}>
                     {submitting ? "Submitting..." : alreadyApplied ? "Already Applied" : expired ? "Job Closed" : "Submit Application"}
                   </button>
                 </form>
@@ -646,7 +459,6 @@ export default function JobDetailClient({
                 </div>
               )}
             </div>
-
             <div style={tipsCard}>
               <SectionHeader title="Submission tips" subtitle="A strong application looks clear" />
               <ul style={tipsList}>
@@ -663,38 +475,42 @@ export default function JobDetailClient({
       {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
 
       <style>{`
-  .job-title {
-    word-break: break-word !important;
-    white-space: normal !important;
-    overflow-wrap: break-word !important;
-  }
-  @media (max-width: 768px) {
-    .logo-wrapper { display: none !important; }
-    .hero-container { flex-direction: column; gap: 16px; }
-    .hero-left { flex-direction: column; align-items: flex-start; gap: 12px; }
-    .job-details { width: 100%; margin-left: 16px; }
-    .hero-actions { margin-left: 16px; }
-    .eyebrow { font-size: 11px !important; text-align: left !important; }
-    .pageTitle { font-size: 28px !important; text-align: left !important; }
-    .pageSubtitle { font-size: 14px !important; text-align: left !important; word-break: break-word !important; white-space: normal !important; }
-    .metaPills { gap: 6px !important; }
-    .metaPills span { font-size: 11px !important; padding: 4px 8px !important; }
-    .layoutGrid { grid-template-columns: 1fr !important; }
-  }
-  @media (min-width: 769px) {
-    .hero-container { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
-    .hero-left { display: flex; align-items: center; gap: 24px; }
-    .logo-wrapper { flex-shrink: 0; }
-    .job-details { flex: 1; margin-left: 20px; }
-    .eyebrow { margin-top: 0; }
-    .hero-actions { display: flex; gap: 12px; }
-  }
-`}</style>
+        .job-title {
+          word-break: break-word !important;
+          white-space: normal !important;
+          overflow-wrap: break-word !important;
+        }
+        @media (max-width: 768px) {
+          .logo-wrapper { display: none !important; }
+          .hero-container { flex-direction: column; gap: 16px; }
+          .hero-left { flex-direction: column; align-items: flex-start; gap: 12px; width: 100%; }
+          .job-details { width: 100%; margin-left: 16px; box-sizing: border-box; }
+          .hero-actions { margin-left: 16px; flex-wrap: wrap; gap: 10px; }
+          .hero-actions button { width: auto !important; margin: 0 !important; }
+          .eyebrow { font-size: 11px !important; text-align: left !important; }
+          .pageTitle { font-size: 28px !important; text-align: left !important; word-break: break-word !important; }
+          .pageSubtitle { font-size: 14px !important; text-align: left !important; word-break: break-word !important; white-space: normal !important; }
+          .metaPills { gap: 6px !important; justify-content: flex-start !important; }
+          .metaPills span { font-size: 11px !important; padding: 4px 8px !important; }
+          .layoutGrid { grid-template-columns: 1fr !important; }
+          /* Prevent horizontal overflow */
+          body, div[style*="pageShell"] { overflow-x: hidden !important; }
+          .job-details, .hero-actions, .hero-left { overflow-x: hidden !important; }
+        }
+        @media (min-width: 769px) {
+          .hero-container { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+          .hero-left { display: flex; align-items: center; gap: 24px; }
+          .logo-wrapper { flex-shrink: 0; }
+          .job-details { flex: 1; margin-left: 20px; }
+          .eyebrow { margin-top: 0; }
+          .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        }
+      `}</style>
     </div>
   );
 }
 
-// ---------- Helper Components (unchanged) ----------
+// ---------- Helper components (unchanged) ----------
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -722,12 +538,13 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// ---------- Style objects (exactly as in the original) ----------
+// ---------- Style objects (exactly as before, but with added overflow-x for pageShell) ----------
 const pageShell: CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",
   padding: 20,
   fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial',
+  overflowX: "hidden", // ✅ prevents horizontal scroll on mobile
 };
 
 const heroCard: CSSProperties = {
@@ -800,9 +617,7 @@ const metaPills: CSSProperties = {
 };
 
 const statusPill = (mode: "open" | "closed"): CSSProperties => ({
-  background: mode === "open"
-    ? "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)"
-    : "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
+  background: mode === "open" ? "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)" : "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
   color: mode === "open" ? "#166534" : "#991b1b",
   padding: "8px 12px",
   borderRadius: 999,
