@@ -69,7 +69,6 @@ export default function JobDetailClient({
   initialUser: any;
 }) {
   const router = useRouter();
-
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -85,7 +84,6 @@ export default function JobDetailClient({
   const [descExpanded, setDescExpanded] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
-  // Auth listener to keep user state in sync
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       const newUser = session?.user || null;
@@ -102,15 +100,11 @@ export default function JobDetailClient({
         setForm(initialForm);
       }
     });
-    return () => {
-      listener?.subscription.unsubscribe();
-    };
+    return () => listener?.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (job?.slug) {
-      setShareUrl(`${window.location.origin}/jobs/${job.slug}`);
-    }
+    if (job?.slug) setShareUrl(`${window.location.origin}/jobs/${job.slug}`);
   }, [job?.slug]);
 
   useEffect(() => {
@@ -120,7 +114,6 @@ export default function JobDetailClient({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Check if user already applied
   useEffect(() => {
     async function checkApplication() {
       if (!authUser?.email) return;
@@ -135,7 +128,6 @@ export default function JobDetailClient({
     checkApplication();
   }, [authUser, job?.id]);
 
-  // Prefill form with user data
   useEffect(() => {
     if (authUser) {
       const metaName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || "";
@@ -250,267 +242,284 @@ export default function JobDetailClient({
 
   if (loading) {
     return (
-      <div style={pageShell}>
-        <div style={loadingCard}>
-          <div style={loadingSpinner} />
-          <h2 style={{ margin: "16px 0 0", color: "#0f172a" }}>Loading job...</h2>
-          <p style={{ margin: "8px 0 0", color: "#64748b" }}>Preparing the role details and application form.</p>
-        </div>
+      <div style={{ ...pageShell, textAlign: "center", padding: "60px 20px" }}>
+        <div style={loadingSpinner} />
+        <h2 style={{ marginTop: 16, color: "#0f172a" }}>Loading job...</h2>
       </div>
     );
   }
 
   if (!job) {
     return (
-      <div style={pageShell}>
-        <div style={emptyCard}>
-          <h1 style={{ margin: 0, color: "#0f172a" }}>Job not found</h1>
-          <p style={{ margin: "10px 0 0", color: "#64748b", lineHeight: 1.8 }}>
-            This job may have been removed, closed, or the link may be incorrect.
-          </p>
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 18 }}>
-            <button type="button" style={primaryBtn} onClick={() => router.push("/jobs")}>Back to Jobs</button>
-          </div>
-        </div>
+      <div style={{ ...pageShell, textAlign: "center", padding: "60px 20px" }}>
+        <h1 style={{ margin: 0, color: "#0f172a" }}>Job not found</h1>
+        <button style={primaryBtn} onClick={() => router.push("/jobs")}>Back to Jobs</button>
       </div>
     );
   }
 
   return (
-    <div style={pageShell}>
-      <div
-        className="job-hero"
-        style={{
-          ...heroCard,
-          backgroundImage: company?.cover_url
-            ? `linear-gradient(135deg, rgba(255,255,255,0.96), rgba(241,245,249,0.98)), url(${company.cover_url})`
-            : "linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)",
-        }}
-      >
-        <div className="hero-container">
-          <div className="hero-left">
-            <div className="logo-wrapper">
-              <div style={brandLogo}>
-                {company?.logo_url ? (
-                  <img src={company.logo_url} alt={company?.company_name || "Company"} style={brandLogoImg} />
-                ) : (
-                  <div style={brandFallback}>{(company?.company_name || "C").charAt(0).toUpperCase()}</div>
-                )}
-              </div>
-            </div>
-            <div className="job-details">
-              <p style={eyebrow}>Skill-based opportunity</p>
-              <h1 style={pageTitle} className="job-title">{job.title}</h1>
-              <p style={{ ...pageSubtitle, wordBreak: "break-word", whiteSpace: "normal", overflowWrap: "break-word" }}>
-                {company?.company_name || "Company"} · {job.role_type || "Role"} · {job.location || "Location not set"}
-              </p>
-              <div style={metaPills}>
-                <span style={statusPill(expired ? "closed" : "open")}>{expired ? "Closed" : "Open"}</span>
-                <span style={metaChip}>{job.is_remote ? "Remote" : "On-site / Hybrid"}</span>
-                <span style={metaChip}>{salaryText}</span>
-                {alreadyApplied && <span style={alreadyAppliedChip}>Already applied ✅</span>}
-              </div>
-            </div>
-          </div>
-          <div className="hero-actions">
-            {company?.username && (
-              <button type="button" style={ghostBtn} onClick={() => router.push(`/company/${company.username}`)}>
-                View Company
-              </button>
-            )}
-            <button type="button" style={ghostBtn} onClick={() => copyText(shareUrl, "Job link copied")}>
-              Copy Job Link
-            </button>
-            <button type="button" style={primaryBtn} onClick={() => router.push("/jobs")}>
-              Browse More Jobs
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div style={layoutGrid}>
-        <section style={mainColumn}>
-          <div style={premiumCard}>
-            <SectionHeader title="About this role" subtitle="A clear view of what the company needs" />
-            <div>
-              <div style={{ ...bodyText, whiteSpace: "pre-wrap" }}>{descToShow}</div>
-              {showReadMoreDesc && (
-                <button
-                  onClick={() => setDescExpanded(!descExpanded)}
-                  style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 8, textDecoration: "underline" }}
-                >
-                  {descExpanded ? "Read less" : "Read more"}
-                </button>
-              )}
-            </div>
-            <div style={detailGrid}>
-              <InfoBox label="Task-based hiring" value={job.task_required ? "Yes" : "No"} />
-              <InfoBox label="Expiry" value={job.expires_at ? new Date(job.expires_at).toLocaleDateString() : "No expiry"} />
-              <InfoBox label="Location" value={job.location || "Not set"} />
-              <InfoBox label="Work mode" value={job.is_remote ? "Remote" : "On-site / Hybrid"} />
-            </div>
-          </div>
-
-          {job.task_required && (
-            <div style={premiumCard}>
-              <SectionHeader title="Skill task" subtitle="This is how the company evaluates real ability" />
-              <div style={taskCard}>
-                <div style={taskHeader}>
-                  <div>
-                    <h3 style={taskTitle}>{job.task_title || "Task"}</h3>
-                    <p style={taskSubtitle}>Read carefully, complete the task, and submit your links below.</p>
-                  </div>
-                  <span style={taskBadge}>{job.task_type || "custom"}</span>
-                </div>
-                <pre style={taskText}>{job.task_instructions || "No instructions provided."}</pre>
-              </div>
-            </div>
-          )}
-
-          <div style={premiumCard}>
-            <SectionHeader title="Company snapshot" subtitle="A quick look at who you are applying to" />
-            <div style={companyCard}>
-              <div style={companyTopRow}>
-                <div style={companyAvatar}>
-                  {company?.logo_url ? (
-                    <img src={company.logo_url} alt={company?.company_name || "Company"} style={companyAvatarImg} />
-                  ) : (
-                    <div style={companyAvatarFallback}>{(company?.company_name || "C").charAt(0).toUpperCase()}</div>
-                  )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h3 style={companyName}>{company?.company_name || "Company"}</h3>
-                  <p style={companyMeta}>{company?.industry || "Industry not set"}{company?.location ? ` • ${company.location}` : ""}</p>
-                  <div>
-                    <p style={companyBio}>{bioToShow}</p>
-                    {showReadMoreBio && (
-                      <button
-                        onClick={() => setBioExpanded(!bioExpanded)}
-                        style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 4, textDecoration: "underline" }}
-                      >
-                        {bioExpanded ? "Read less" : "Read more"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div style={companyLinks}>
-                {company?.website && <a href={company.website} target="_blank" rel="noreferrer" style={linkPill}>Website</a>}
-                {company?.email ? (
-                  <a href={`mailto:${company.email}`} style={linkPill} onClick={(e) => { e.preventDefault(); setTimeout(() => { window.location.href = `mailto:${company.email}`; }, 100); }}>Email</a>
-                ) : (
-                  <span style={{ ...linkPill, opacity: 0.5, cursor: "default" }}>Email not available</span>
-                )}
-                {company?.username && (
-                  <button type="button" style={linkPillBtn} onClick={() => router.push(`/company/${company.username}`)}>Public Profile</button>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <aside style={sideColumn}>
-          <div style={stickyStack}>
-            <div style={applyCard}>
-              <SectionHeader
-                title="Apply now"
-                subtitle={
-                  useExternalApply
-                    ? "This job is curated by OfSkillJob. You will apply directly on the employer's website."
-                    : alreadyApplied
-                    ? "You have already submitted an application for this job."
-                    : authUser
-                    ? "Your details can be auto-filled and your submission will go straight to the company."
-                    : "Sign in to auto-fill your details and submit your application."
-                }
-              />
-              {alreadyApplied && !useExternalApply && (
-                <div style={alreadyAppliedBanner}>
-                  <strong style={{ display: "block", marginBottom: 4 }}>Already applied</strong>
-                  <span>You already submitted an application for this role. You can still copy the job link, view the company, or browse more opportunities.</span>
-                </div>
-              )}
-              {useExternalApply ? (
-                <div style={guestBox}>
-                  <p style={guestText}>This job is hosted by <strong>{company?.company_name || "the employer"}</strong>. Click the button below to apply directly on their website.</p>
-                  <div style={guestActions}>
-                    <a href={job.external_apply_url!} target="_blank" rel="noopener noreferrer" style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}>Apply via OfSkillJob →</a>
-                  </div>
-                </div>
-              ) : authUser ? (
-                <form onSubmit={handleSubmit} style={formGrid}>
-                  <Field label="Full name *"><input name="applicant_name" value={form.applicant_name} onChange={handleChange} placeholder="Your name" style={input} disabled={alreadyApplied} /></Field>
-                  <Field label="Email *"><input name="applicant_email" value={form.applicant_email} onChange={handleChange} placeholder="your@email.com" style={input} disabled={alreadyApplied} /></Field>
-                  <Field label="Phone"><input name="applicant_phone" value={form.applicant_phone} onChange={handleChange} placeholder="Phone number" style={input} disabled={alreadyApplied} /></Field>
-                  <Field label="Resume link *"><input name="resume_link" value={form.resume_link} onChange={handleChange} placeholder="Resume / portfolio link" style={input} disabled={alreadyApplied} /></Field>
-                  <Field label="Google Drive link *"><input name="drive_link" value={form.drive_link} onChange={handleChange} placeholder="Drive folder link" style={input} disabled={alreadyApplied} /></Field>
-                  <Field label="Note"><textarea name="note" value={form.note} onChange={handleChange} placeholder="Short note" style={textarea} disabled={alreadyApplied} /></Field>
-                  <button type="submit" style={submitBtn} disabled={submitting || expired || alreadyApplied}>
-                    {submitting ? "Submitting..." : alreadyApplied ? "Already Applied" : expired ? "Job Closed" : "Submit Application"}
-                  </button>
-                </form>
-              ) : (
-                <div style={guestBox}>
-                  <p style={guestText}>Sign up or log in to apply.</p>
-                  <div style={guestActions}>
-                    <button style={primaryBtn} onClick={() => router.push("/signup")}>Sign up</button>
-                    <button style={ghostBtn} onClick={() => router.push("/login")}>Log in</button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div style={tipsCard}>
-              <SectionHeader title="Submission tips" subtitle="A strong application looks clear" />
-              <ul style={tipsList}>
-                <li>Use one Drive folder with access enabled.</li>
-                <li>Keep your note short and specific.</li>
-                <li>Make sure the links open without permission issues.</li>
-                <li>Submit the exact task the company asked for.</li>
-              </ul>
-            </div>
-          </div>
-        </aside>
-      </div>
-
-      {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
-
-      <style>{`
-        .job-title {
-          word-break: break-word !important;
-          white-space: normal !important;
-          overflow-wrap: break-word !important;
+    <>
+      <style jsx global>{`
+        html, body, #__next {
+          overflow-x: hidden !important;
+          width: 100% !important;
+          max-width: 100% !important;
         }
-        @media (max-width: 768px) {
-          .logo-wrapper { display: none !important; }
-          .hero-container { flex-direction: column; gap: 16px; }
-          .hero-left { flex-direction: column; align-items: flex-start; gap: 12px; width: 100%; }
-          .job-details { width: 100%; margin-left: 16px; box-sizing: border-box; }
-          .hero-actions { margin-left: 16px; flex-wrap: wrap; gap: 10px; }
-          .hero-actions button { width: auto !important; margin: 0 !important; }
-          .eyebrow { font-size: 11px !important; text-align: left !important; }
-          .pageTitle { font-size: 28px !important; text-align: left !important; word-break: break-word !important; }
-          .pageSubtitle { font-size: 14px !important; text-align: left !important; word-break: break-word !important; white-space: normal !important; }
-          .metaPills { gap: 6px !important; justify-content: flex-start !important; }
-          .metaPills span { font-size: 11px !important; padding: 4px 8px !important; }
-          .layoutGrid { grid-template-columns: 1fr !important; }
-          /* Prevent horizontal overflow */
-          body, div[style*="pageShell"] { overflow-x: hidden !important; }
-          .job-details, .hero-actions, .hero-left { overflow-x: hidden !important; }
-        }
-        @media (min-width: 769px) {
-          .hero-container { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
-          .hero-left { display: flex; align-items: center; gap: 24px; }
-          .logo-wrapper { flex-shrink: 0; }
-          .job-details { flex: 1; margin-left: 20px; }
-          .eyebrow { margin-top: 0; }
-          .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        * {
+          box-sizing: border-box;
         }
       `}</style>
-    </div>
+      <div style={{ ...pageShell, overflowX: "hidden", maxWidth: "100%", width: "100%", padding: "20px", boxSizing: "border-box" }}>
+        <div
+          className="job-hero"
+          style={{
+            ...heroCard,
+            backgroundImage: company?.cover_url
+              ? `linear-gradient(135deg, rgba(255,255,255,0.96), rgba(241,245,249,0.98)), url(${company.cover_url})`
+              : "linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)",
+          }}
+        >
+          <div className="hero-container">
+            <div className="hero-left">
+              <div className="logo-wrapper">
+                <div style={brandLogo}>
+                  {company?.logo_url ? (
+                    <img src={company.logo_url} alt={company?.company_name || "Company"} style={brandLogoImg} />
+                  ) : (
+                    <div style={brandFallback}>{(company?.company_name || "C").charAt(0).toUpperCase()}</div>
+                  )}
+                </div>
+              </div>
+              <div className="job-details">
+                <p className="eyebrow-text" style={eyebrow}>Skill-based opportunity</p>
+                <h1 style={pageTitle} className="job-title">{job.title}</h1>
+                <p className="job-subtitle" style={{ ...pageSubtitle, wordBreak: "break-word", whiteSpace: "normal", overflowWrap: "break-word" }}>
+                  {company?.company_name || "Company"} · {job.role_type || "Role"} · {job.location || "Location not set"}
+                </p>
+                <div style={metaPills}>
+                  <span style={statusPill(expired ? "closed" : "open")}>{expired ? "Closed" : "Open"}</span>
+                  <span style={metaChip}>{job.is_remote ? "Remote" : "On-site / Hybrid"}</span>
+                  <span style={metaChip}>{salaryText}</span>
+                  {alreadyApplied && <span style={alreadyAppliedChip}>Already applied ✅</span>}
+                </div>
+              </div>
+            </div>
+            <div className="hero-actions">
+              {company?.username && (
+                <button type="button" style={ghostBtn} onClick={() => router.push(`/company/${company.username}`)}>
+                  View Company
+                </button>
+              )}
+              <button type="button" style={ghostBtn} onClick={() => copyText(shareUrl, "Job link copied")}>
+                Copy Job Link
+              </button>
+              <button type="button" style={primaryBtn} onClick={() => router.push("/jobs")}>
+                Browse More Jobs
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ✅ FIX: gridTemplateColumns now reads isMobile directly — no CSS override needed */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "1.35fr 0.8fr",
+          gap: 18,
+          alignItems: "start",
+        }}>
+          <section style={mainColumn}>
+            <div style={premiumCard}>
+              <SectionHeader title="About this role" subtitle="A clear view of what the company needs" />
+              <div>
+                <div style={{ ...bodyText, whiteSpace: "pre-wrap" }}>{descToShow}</div>
+                {showReadMoreDesc && (
+                  <button
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 8, textDecoration: "underline" }}
+                  >
+                    {descExpanded ? "Read less" : "Read more"}
+                  </button>
+                )}
+              </div>
+              <div style={detailGrid}>
+                <InfoBox label="Task-based hiring" value={job.task_required ? "Yes" : "No"} />
+                <InfoBox label="Expiry" value={job.expires_at ? new Date(job.expires_at).toLocaleDateString() : "No expiry"} />
+                <InfoBox label="Location" value={job.location || "Not set"} />
+                <InfoBox label="Work mode" value={job.is_remote ? "Remote" : "On-site / Hybrid"} />
+              </div>
+            </div>
+
+            {job.task_required && (
+              <div style={premiumCard}>
+                <SectionHeader title="Skill task" subtitle="This is how the company evaluates real ability" />
+                <div style={taskCard}>
+                  <div style={taskHeader}>
+                    <div>
+                      <h3 style={taskTitle}>{job.task_title || "Task"}</h3>
+                      <p style={taskSubtitle}>Read carefully, complete the task, and submit your links below.</p>
+                    </div>
+                    <span style={taskBadge}>{job.task_type || "custom"}</span>
+                  </div>
+                  <pre style={taskText}>{job.task_instructions || "No instructions provided."}</pre>
+                </div>
+              </div>
+            )}
+
+            <div style={premiumCard}>
+              <SectionHeader title="Company snapshot" subtitle="A quick look at who you are applying to" />
+              <div style={companyCard}>
+                <div style={companyTopRow}>
+                  <div style={companyAvatar}>
+                    {company?.logo_url ? (
+                      <img src={company.logo_url} alt={company?.company_name || "Company"} style={companyAvatarImg} />
+                    ) : (
+                      <div style={companyAvatarFallback}>{(company?.company_name || "C").charAt(0).toUpperCase()}</div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={companyName}>{company?.company_name || "Company"}</h3>
+                    <p style={companyMeta}>{company?.industry || "Industry not set"}{company?.location ? ` • ${company.location}` : ""}</p>
+                    <div>
+                      <p style={companyBio}>{bioToShow}</p>
+                      {showReadMoreBio && (
+                        <button
+                          onClick={() => setBioExpanded(!bioExpanded)}
+                          style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 4, textDecoration: "underline" }}
+                        >
+                          {bioExpanded ? "Read less" : "Read more"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div style={companyLinks}>
+                  {company?.website && <a href={company.website} target="_blank" rel="noreferrer" style={linkPill}>Website</a>}
+                  {company?.email ? (
+                    <a href={`mailto:${company.email}`} style={linkPill} onClick={(e) => { e.preventDefault(); setTimeout(() => { window.location.href = `mailto:${company.email}`; }, 100); }}>Email</a>
+                  ) : (
+                    <span style={{ ...linkPill, opacity: 0.5, cursor: "default" }}>Email not available</span>
+                  )}
+                  {company?.username && (
+                    <button type="button" style={linkPillBtn} onClick={() => router.push(`/company/${company.username}`)}>Public Profile</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside style={sideColumn}>
+            {/* ✅ FIX: sticky only on desktop, static on mobile to avoid overflow issues */}
+            <div style={{
+              display: "grid",
+              gap: 18,
+              position: isMobile ? "static" : "sticky",
+              top: 20,
+            }}>
+              <div style={applyCard}>
+                <SectionHeader
+                  title="Apply now"
+                  subtitle={
+                    useExternalApply
+                      ? "This job is curated by OfSkillJob. You will apply directly on the employer's website."
+                      : alreadyApplied
+                      ? "You have already submitted an application for this job."
+                      : authUser
+                      ? "Your details can be auto-filled and your submission will go straight to the company."
+                      : "Sign in to auto-fill your details and submit your application."
+                  }
+                />
+                {alreadyApplied && !useExternalApply && (
+                  <div style={alreadyAppliedBanner}>
+                    <strong style={{ display: "block", marginBottom: 4 }}>Already applied</strong>
+                    <span>You already submitted an application for this role. You can still copy the job link, view the company, or browse more opportunities.</span>
+                  </div>
+                )}
+                {useExternalApply ? (
+                  <div style={guestBox}>
+                    <p style={guestText}>This job is hosted by <strong>{company?.company_name || "the employer"}</strong>. Click the button below to apply directly on their website.</p>
+                    <div style={guestActions}>
+                      <a href={job.external_apply_url!} target="_blank" rel="noopener noreferrer" style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}>Apply via OfSkillJob →</a>
+                    </div>
+                  </div>
+                ) : authUser ? (
+                  <form onSubmit={handleSubmit} style={formGrid}>
+                    <Field label="Full name *"><input name="applicant_name" value={form.applicant_name} onChange={handleChange} placeholder="Your name" style={input} disabled={alreadyApplied} /></Field>
+                    <Field label="Email *"><input name="applicant_email" value={form.applicant_email} onChange={handleChange} placeholder="your@email.com" style={input} disabled={alreadyApplied} /></Field>
+                    <Field label="Phone"><input name="applicant_phone" value={form.applicant_phone} onChange={handleChange} placeholder="Phone number" style={input} disabled={alreadyApplied} /></Field>
+                    <Field label="Resume link *"><input name="resume_link" value={form.resume_link} onChange={handleChange} placeholder="Resume / portfolio link" style={input} disabled={alreadyApplied} /></Field>
+                    <Field label="Google Drive link *"><input name="drive_link" value={form.drive_link} onChange={handleChange} placeholder="Drive folder link" style={input} disabled={alreadyApplied} /></Field>
+                    <Field label="Note"><textarea name="note" value={form.note} onChange={handleChange} placeholder="Short note" style={textarea} disabled={alreadyApplied} /></Field>
+                    <button type="submit" style={submitBtn} disabled={submitting || expired || alreadyApplied}>
+                      {submitting ? "Submitting..." : alreadyApplied ? "Already Applied" : expired ? "Job Closed" : "Submit Application"}
+                    </button>
+                  </form>
+                ) : (
+                  <div style={guestBox}>
+                    <p style={guestText}>Sign up or log in to apply.</p>
+                    <div style={guestActions}>
+                      <button style={primaryBtn} onClick={() => router.push("/signup")}>Sign up</button>
+                      <button style={ghostBtn} onClick={() => router.push("/login")}>Log in</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div style={tipsCard}>
+                <SectionHeader title="Submission tips" subtitle="A strong application looks clear" />
+                <ul style={tipsList}>
+                  <li>1.Use one Drive folder with access enabled.</li>
+                  <li>2.Keep your note short and specific.</li>
+                  <li>3.Make sure the links open without permission issues.</li>
+                  <li>4.Submit the exact task the company asked for.</li>
+                </ul>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        {toast && <div style={toastStyle(toast.type)}>{toast.message}</div>}
+
+        <style>{`
+          .job-title {
+            word-break: break-word !important;
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
+          }
+          @media (max-width: 768px) {
+            .logo-wrapper { display: none !important; }
+            .hero-container { flex-direction: column; gap: 16px; width: 100%; }
+            .hero-left { flex-direction: column; align-items: flex-start; gap: 12px; width: 100%; }
+            .job-details { width: 100%; margin-left: 0 !important; padding: 0 8px; box-sizing: border-box; }
+            .eyebrow-text { margin-left: 16px !important; }
+            .hero-actions {
+              display: grid !important;
+              grid-template-columns: 1fr 1fr !important;
+              gap: 12px !important;
+              margin-top: 8px !important;
+              width: 100% !important;
+              padding: 0 8px;
+              box-sizing: border-box;
+            }
+            .hero-actions button { width: 100% !important; margin: 0 !important; text-align: center; }
+            .pageTitle { font-size: 28px !important; text-align: left !important; }
+            .job-subtitle { font-size: 14px !important; text-align: left !important; word-break: break-word !important; white-space: normal !important; }
+            .metaPills { gap: 6px !important; justify-content: flex-start !important; }
+            .metaPills span { font-size: 11px !important; padding: 4px 8px !important; }
+          }
+          @media (min-width: 769px) {
+            .hero-container { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+            .hero-left { display: flex; align-items: center; gap: 24px; }
+            .logo-wrapper { flex-shrink: 0; }
+            .job-details { flex: 1; margin-left: 20px; }
+            .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+          }
+        `}</style>
+      </div>
+    </>
   );
 }
 
-// ---------- Helper components (unchanged) ----------
+// ---------- Helper components ----------
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -538,13 +547,15 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// ---------- Style objects (exactly as before, but with added overflow-x for pageShell) ----------
+// ---------- Styles ----------
 const pageShell: CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",
   padding: 20,
   fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial',
-  overflowX: "hidden", // ✅ prevents horizontal scroll on mobile
+  overflowX: "hidden",
+  width: "100%",
+  boxSizing: "border-box",
 };
 
 const heroCard: CSSProperties = {
@@ -667,13 +678,6 @@ const ghostBtn: CSSProperties = {
   fontWeight: 800,
 };
 
-const layoutGrid: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1.35fr 0.8fr",
-  gap: 18,
-  alignItems: "start",
-};
-
 const mainColumn: CSSProperties = {
   display: "grid",
   gap: 18,
@@ -682,13 +686,6 @@ const mainColumn: CSSProperties = {
 const sideColumn: CSSProperties = {
   display: "grid",
   gap: 18,
-};
-
-const stickyStack: CSSProperties = {
-  display: "grid",
-  gap: 18,
-  position: "sticky",
-  top: 20,
 };
 
 const premiumCard: CSSProperties = {
@@ -956,14 +953,6 @@ const alreadyAppliedBanner: CSSProperties = {
   marginBottom: 14,
 };
 
-const loadingCard: CSSProperties = {
-  background: "white",
-  borderRadius: 24,
-  padding: 40,
-  textAlign: "center",
-  boxShadow: "0 10px 30px rgba(2,6,23,0.06)",
-};
-
 const loadingSpinner: CSSProperties = {
   width: 42,
   height: 42,
@@ -971,10 +960,6 @@ const loadingSpinner: CSSProperties = {
   border: "4px solid #dbe3ee",
   borderTopColor: "#2563eb",
   margin: "0 auto",
-};
-
-const emptyCard: CSSProperties = {
-  ...loadingCard,
 };
 
 const toastStyle = (type: ToastType): CSSProperties => ({
