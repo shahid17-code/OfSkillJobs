@@ -32,6 +32,27 @@ type JobItem = JobRow & {
   company_logo_url: string | null;
 };
 
+// Helper: time ago in words
+function timeAgo(dateString: string | null): string {
+  if (!dateString) return "Recently";
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (seconds < 60) return "Just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months > 1 ? "s" : ""} ago`;
+  const years = Math.floor(days / 365);
+  return `${years} year${years > 1 ? "s" : ""} ago`;
+}
+
 export default function JobsPage() {
   const router = useRouter();
   const [jobs, setJobs] = useState<JobItem[]>([]);
@@ -39,7 +60,7 @@ export default function JobsPage() {
   const [search, setSearch] = useState("");
   const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
 
-  // ✅ Redirect companies away from jobs page
+  // Redirect companies away from jobs page
   useEffect(() => {
     async function redirectCompany() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -59,7 +80,6 @@ export default function JobsPage() {
 
   useEffect(() => {
     loadJobs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadJobs() {
@@ -67,9 +87,7 @@ export default function JobsPage() {
       setLoading(true);
       setAppliedJobIds([]);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
       const { data: jobRows, error: jobError } = await supabase
         .from("jobs")
@@ -306,6 +324,21 @@ export default function JobsPage() {
               const expired =
                 !!job.expires_at && new Date(job.expires_at).getTime() <= Date.now();
               const alreadyApplied = appliedJobIds.includes(job.id);
+              const postedTime = timeAgo(job.created_at);
+
+              // Urgency badge
+              let urgencyBadge = null;
+              if (job.expires_at && !expired) {
+                const daysLeft = Math.ceil((new Date(job.expires_at).getTime() - Date.now()) / (1000 * 3600 * 24));
+                if (daysLeft <= 3) {
+                  urgencyBadge = { text: "⏰ Expiring soon", color: "#ef4444" };
+                }
+              } else if (job.created_at) {
+                const daysSincePosted = Math.floor((Date.now() - new Date(job.created_at).getTime()) / (1000 * 3600 * 24));
+                if (daysSincePosted <= 7) {
+                  urgencyBadge = { text: "🔥 Hot", color: "#f59e0b" };
+                }
+              }
 
               return (
                 <div key={job.id} style={jobCard}>
@@ -344,6 +377,15 @@ export default function JobsPage() {
                     {job.is_remote ? "• Remote" : "• On-site / Hybrid"}
                   </p>
 
+                  <div style={metaInfoRow}>
+                    <span style={postTime}>📅 Posted {postedTime}</span>
+                    {urgencyBadge && (
+                      <span style={{ ...urgencyStyle, background: urgencyBadge.color }}>
+                        {urgencyBadge.text}
+                      </span>
+                    )}
+                  </div>
+
                   <div style={jobDescription}>
                     {job.description.length > 180
                       ? `${job.description.slice(0, 180)}...`
@@ -353,9 +395,7 @@ export default function JobsPage() {
                   <div style={pillRow}>
                     <span style={pill}>
                       {job.salary_min || job.salary_max
-                        ? `${job.salary_min ? `₹${job.salary_min}` : "₹—"} - ${
-                            job.salary_max ? `₹${job.salary_max}` : "₹—"
-                          }`
+                        ? `${job.salary_min ? `₹${job.salary_min}` : "₹—"} - ${job.salary_max ? `₹${job.salary_max}` : "₹—"}`
                         : "Salary confidential"}
                     </span>
 
@@ -423,7 +463,31 @@ function StatBox({ label, value }: { label: string; value: string }) {
   );
 }
 
-// All style definitions (unchanged except for corrected color property inside objects)
+// ---------- New styles – ensure correct syntax ----------
+const metaInfoRow: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  marginTop: "8px",
+  flexWrap: "wrap",
+};
+
+const postTime: React.CSSProperties = {
+  fontSize: "12px",
+  color: "#64748b",
+  fontWeight: 500,
+};
+
+const urgencyStyle: React.CSSProperties = {
+  fontSize: "11px",
+  fontWeight: 800,
+  padding: "4px 8px",
+  borderRadius: "20px",
+  color: "white",
+  textTransform: "uppercase",
+};
+
+// ---------- Original style definitions (all correct) ----------
 const pageShell: React.CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",

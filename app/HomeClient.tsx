@@ -9,9 +9,6 @@ export default function HomeClient() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<any>(null);
-  const [jobCount, setJobCount] = useState(0);
-  const [companyCount, setCompanyCount] = useState(0);
-  const [candidateCount, setCandidateCount] = useState(0);
 
   useEffect(() => {
     async function getData() {
@@ -21,13 +18,6 @@ export default function HomeClient() {
         const { data } = await supabase.from("users").select("role").eq("id", user.id).single();
         setRole(data?.role);
       }
-
-      const { count: jobs } = await supabase.from("jobs").select("*", { count: "exact", head: true });
-      const { count: companies } = await supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "company");
-      const { count: developers } = await supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "developer");
-      setJobCount(jobs || 0);
-      setCompanyCount(companies || 0);
-      setCandidateCount(developers || 0);
     }
     getData();
   }, []);
@@ -63,9 +53,8 @@ export default function HomeClient() {
           </div>
           <h1 style={styles.heroTitle}>Show Skills. Get Hired.</h1>
           <p style={styles.heroSubtitle}>
-            The platform where your real abilities speak louder than a resume.
-            Complete challenges, build your portfolio, and connect with top companies – 
-            for every industry, not just tech.
+            The only platform where you prove your skills with real tasks before you apply.
+            Companies post challenges – you complete them – then apply. No more black‑hole resumes.
           </p>
           <div style={styles.buttonGroup}>
             <button onClick={handleGetHired} style={styles.primaryBtn}>Get Hired →</button>
@@ -77,16 +66,83 @@ export default function HomeClient() {
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div style={styles.statsBar}>
-        <div><strong>{jobCount}+</strong><br />Jobs Posted</div>
-        <div><strong>{candidateCount}+</strong><br />Active Candidates</div>
-        <div><strong>{companyCount}+</strong><br />Companies</div>
+      {/* ✅ NEW: Task‑First Application Process */}
+      <div style={styles.taskFlow}>
+        <h2 style={styles.sectionTitle}>How applying works</h2>
+        <div style={styles.flowGrid}>
+          <div style={styles.flowCard}>
+            <div style={styles.flowNumber}>1</div>
+            <div style={styles.flowIcon}>📋</div>
+            <h3>Company posts a task</h3>
+            <p>Every job comes with a relevant skill test – a coding problem, a design mock, a marketing plan, or a sales scenario.</p>
+          </div>
+          <div style={styles.flowArrow}>→</div>
+          <div style={styles.flowCard}>
+            <div style={styles.flowNumber}>2</div>
+            <div style={styles.flowIcon}>💪</div>
+            <h3>You complete the task</h3>
+            <p>Show your real ability. Upload your solution (Google Drive link, code repo, design file, etc.).</p>
+          </div>
+          <div style={styles.flowArrow}>→</div>
+          <div style={styles.flowCard}>
+            <div style={styles.flowNumber}>3</div>
+            <div style={styles.flowIcon}>🎯</div>
+            <h3>Apply only if you succeed</h3>
+            <p>Your application is sent only after a successful task submission. Companies see verified skills – not just a resume.</p>
+          </div>
+        </div>
       </div>
 
-      {/* How It Works */}
+      {/* Social Proof Stats (Static) */}
+      <div style={styles.statsBar}>
+        <div><strong>50+</strong><br />Verified Companies</div>
+        <div><strong>1000+</strong><br />Active Job Seekers</div>
+        <div><strong>100+</strong><br />Successful Placements</div>
+      </div>
+
+      {/* Community Links */}
+      <div style={styles.communityBar}>
+        <p style={styles.communityText}>Join our trusted community →</p>
+        <div style={styles.communityLinks}>
+          <a href="https://reddit.com/u/OfSkillJob" target="_blank" rel="noopener noreferrer" style={styles.communityLink}>
+            <span style={{ fontSize: "1.5rem" }}>🤝</span> Reddit: u/OfSkillJob
+          </a>
+          <a href="https://t.me/OfSkillJob" target="_blank" rel="noopener noreferrer" style={styles.communityLink}>
+            <span style={{ fontSize: "1.5rem" }}>✈️</span> Telegram: @OfSkillJob
+          </a>
+        </div>
+      </div>
+
+      {/* How we're different (updated to focus on task‑based) */}
+      <div style={styles.different}>
+        <h2 style={styles.sectionTitle}>How we're different</h2>
+        <div style={styles.diffGrid}>
+          <div style={styles.diffCard}>
+            <div style={styles.diffIcon}>✅</div>
+            <h3>Task‑first screening</h3>
+            <p>You can't apply until you prove your skill. Companies get pre‑filtered, serious candidates.</p>
+          </div>
+          <div style={styles.diffCard}>
+            <div style={styles.diffIcon}>🏆</div>
+            <h3>Earn badges & leaderboard</h3>
+            <p>Get points for completing tasks, applying, and daily streaks. Stand out from the crowd.</p>
+          </div>
+          <div style={styles.diffCard}>
+            <div style={styles.diffIcon}>📊</div>
+            <h3>Real‑time tracking</h3>
+            <p>Know exactly when your profile is viewed, resume downloaded, or you're shortlisted.</p>
+          </div>
+          <div style={styles.diffCard}>
+            <div style={styles.diffIcon}>🎥</div>
+            <h3>Video intros → 2x callbacks</h3>
+            <p>Add a short intro video. Recruiters love seeing the person behind the profile.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works (original 3 steps) – keep as complementary */}
       <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>How It Works</h2>
+        <h2 style={styles.sectionTitle}>Simple 3‑step journey</h2>
         <div style={styles.grid3}>
           <div style={styles.card}>
             <div style={styles.cardIcon}>📝</div>
@@ -123,33 +179,6 @@ export default function HomeClient() {
         <Link href="/jobs">
           <button style={styles.outlineBtn}>Browse All Jobs →</button>
         </Link>
-      </div>
-
-      {/* Features */}
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Why Choose OfSkillJob?</h2>
-        <div style={styles.grid2}>
-          <div style={styles.featureCard}>
-            <span>🏅</span>
-            <h3>Leaderboard & Badges</h3>
-            <p>Compete, earn points, and showcase your achievements.</p>
-          </div>
-          <div style={styles.featureCard}>
-            <span>📊</span>
-            <h3>Real‑Time Tracking</h3>
-            <p>Know when your application is viewed, reviewed, or shortlisted.</p>
-          </div>
-          <div style={styles.featureCard}>
-            <span>🎥</span>
-            <h3>Video Introductions</h3>
-            <p>Stand out with a personal video – 2x higher chance to get noticed.</p>
-          </div>
-          <div style={styles.featureCard}>
-            <span>🔒</span>
-            <h3>Secure & Free</h3>
-            <p>Always free for job seekers. Companies pay only for premium features.</p>
-          </div>
-        </div>
       </div>
 
       {/* Final CTA */}
@@ -260,6 +289,51 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 700,
     cursor: "pointer",
   },
+  taskFlow: {
+    marginBottom: "80px",
+  },
+  flowGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "16px",
+    marginTop: "40px",
+  },
+  flowCard: {
+    flex: 1,
+    minWidth: "240px",
+    background: "white",
+    borderRadius: "24px",
+    padding: "24px",
+    textAlign: "center",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.05)",
+    position: "relative",
+  },
+  flowNumber: {
+    position: "absolute",
+    top: "-12px",
+    left: "20px",
+    background: "#2563eb",
+    color: "white",
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+    fontSize: "16px",
+  },
+  flowIcon: {
+    fontSize: "48px",
+    marginBottom: "16px",
+  },
+  flowArrow: {
+    fontSize: "32px",
+    color: "#94a3b8",
+    fontWeight: "bold",
+  },
   statsBar: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
@@ -268,8 +342,65 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: "24px",
     padding: "32px",
     textAlign: "center",
-    marginBottom: "80px",
+    marginBottom: "40px",
     boxShadow: "0 8px 20px rgba(0,0,0,0.05)",
+  },
+  communityBar: {
+    background: "#f1f5f9",
+    borderRadius: "24px",
+    padding: "20px 24px",
+    marginBottom: "60px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: "16px",
+  },
+  communityText: {
+    fontSize: "16px",
+    fontWeight: 600,
+    color: "#1e293b",
+    margin: 0,
+  },
+  communityLinks: {
+    display: "flex",
+    gap: "20px",
+    flexWrap: "wrap",
+  },
+  communityLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "white",
+    padding: "8px 16px",
+    borderRadius: "40px",
+    textDecoration: "none",
+    color: "#0f172a",
+    fontWeight: 600,
+    fontSize: "14px",
+    transition: "transform 0.2s",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+  },
+  different: {
+    marginBottom: "80px",
+  },
+  diffGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+    gap: "24px",
+    marginTop: "40px",
+  },
+  diffCard: {
+    background: "white",
+    borderRadius: "20px",
+    padding: "24px",
+    textAlign: "center",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.05)",
+    transition: "transform 0.3s",
+  },
+  diffIcon: {
+    fontSize: "36px",
+    marginBottom: "16px",
   },
   section: {
     marginBottom: "80px",
@@ -299,11 +430,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: "32px",
     marginTop: "40px",
   },
-  grid2: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "32px",
-  },
   grid4: {
     display: "flex",
     flexWrap: "wrap",
@@ -322,16 +448,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   cardIcon: {
     fontSize: "40px",
     marginBottom: "16px",
-  },
-  featureCard: {
-    background: "white",
-    borderRadius: "20px",
-    padding: "24px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
   },
   pill: {
     background: "white",
