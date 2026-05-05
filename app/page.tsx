@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     siteName: 'OfSkillJob',
     images: [
       {
-        url: 'https://ofskilljobs.vercel.app/google-logo.png',
+        url: 'https://ofskilljobs.vercel.app/og-image.png',   // ✅ updated to og-image.png
         width: 1200,
         height: 630,
         alt: 'OfSkillJob - Skill-based hiring platform',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'OfSkillJob – Show Skills. Get Hired.',
     description: 'Skill-based hiring for developers. Earn points, showcase projects, get hired.',
-    images: ['https://ofskilljobs.vercel.app/google-logo.png'],
+    images: ['https://ofskilljobs.vercel.app/og-image.png'], // ✅ updated to og-image.png
   },
   alternates: {
     canonical: 'https://ofskilljobs.vercel.app',

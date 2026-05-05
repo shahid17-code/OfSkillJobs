@@ -7,7 +7,7 @@ export const metadata = {
   title: "OfSkillJob",
   description: "Show Skills. Get Hired.",
   icons: {
-    icon: "/favicon.png",      // ✅ correct public path
+    icon: "/favicon.png",
   },
 };
 
@@ -73,6 +73,7 @@ export default function RootLayout({
             <Link href="/contact" style={footerLinkStyle}>Contact</Link>
             <Link href="/privacy" style={footerLinkStyle}>Privacy</Link>
             <Link href="/terms" style={footerLinkStyle}>Terms</Link>
+            <Link href="/blog" style={footerLinkStyle}>Blog</Link> {/* ✅ NEW */}
           </div>
           <div
             style={{

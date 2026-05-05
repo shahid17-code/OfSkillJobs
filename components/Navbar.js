@@ -47,7 +47,6 @@ export default function Navbar() {
     setLoading(false);
   }
 
-  // ✅ Reload user data when pathname changes (e.g., after redirect from edit page)
   useEffect(() => {
     async function refreshUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -89,6 +88,7 @@ export default function Navbar() {
           <button className={isActive("/") ? "active-btn" : "nav-btn"} onClick={() => router.push("/")}>Home</button>
           <button className={isActive("/challenges") ? "active-btn" : "nav-btn"} onClick={() => router.push("/challenges")}>Challenges</button>
           <button className={isActive("/jobs") ? "active-btn" : "nav-btn"} onClick={() => router.push("/jobs")}>Jobs</button>
+          <button className={isActive("/blog") ? "active-btn" : "nav-btn"} onClick={() => router.push("/blog")}>Blog</button>
           <button className="primary-btn" onClick={() => router.push("/signup")}>Signup</button>
           <button className="secondary-btn" onClick={() => router.push("/login")}>Login</button>
         </div>
@@ -102,6 +102,7 @@ export default function Navbar() {
           <button className={isActive(`/applications/${user?.id}`) ? "active-btn" : "nav-btn"} onClick={() => user?.id && router.push(`/applications/${user.id}`)}>Applications</button>
           <button className={isActive("/challenges") ? "active-btn" : "nav-btn"} onClick={() => router.push("/challenges")}>Challenges</button>
           <button className={isActive("/leaderboard") ? "active-btn" : "nav-btn"} onClick={() => router.push("/leaderboard")}>Leaderboard</button>
+          <button className={isActive("/blog") ? "active-btn" : "nav-btn"} onClick={() => router.push("/blog")}>Blog</button>
           <button className={isActive("/profile") ? "active-btn" : "nav-btn"} onClick={() => router.push("/profile")}>Profile</button>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
@@ -121,6 +122,7 @@ export default function Navbar() {
             Profile
           </button>
           <button className={isActive("/company/dashboard") ? "active-btn" : "nav-btn"} onClick={() => router.push("/company/dashboard")}>Dashboard</button>
+          <button className={isActive("/blog") ? "active-btn" : "nav-btn"} onClick={() => router.push("/blog")}>Blog</button>
           <button className="highlighted-btn" onClick={() => router.push("/company/jobs/new")}>Post Job</button>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
@@ -164,6 +166,7 @@ export default function Navbar() {
           <button onClick={() => { closeMenu(); router.push("/"); }} className="mobile-btn">Home</button>
           <button onClick={() => { closeMenu(); router.push("/jobs"); }} className="mobile-btn">Jobs</button>
           <button onClick={() => { closeMenu(); router.push("/challenges"); }} className="mobile-btn">Challenges</button>
+          <button onClick={() => { closeMenu(); router.push("/blog"); }} className="mobile-btn">Blog</button>
           <button onClick={() => { closeMenu(); router.push("/signup"); }} className="mobile-btn">Signup</button>
           <button onClick={() => { closeMenu(); router.push("/login"); }} className="mobile-btn">Login</button>
         </>
@@ -177,6 +180,7 @@ export default function Navbar() {
           <button onClick={() => { closeMenu(); router.push(`/applications/${user.id}`); }} className="mobile-btn">Track Applications</button>
           <button onClick={() => { closeMenu(); router.push("/challenges"); }} className="mobile-btn">Challenges</button>
           <button onClick={() => { closeMenu(); router.push("/leaderboard"); }} className="mobile-btn">Leaderboard</button>
+          <button onClick={() => { closeMenu(); router.push("/blog"); }} className="mobile-btn">Blog</button>
           <button onClick={() => { closeMenu(); router.push("/profile"); }} className="mobile-btn">My Profile</button>
           <button onClick={handleLogout} className="mobile-logout-btn">Logout</button>
         </>
@@ -188,6 +192,7 @@ export default function Navbar() {
           <button onClick={() => { closeMenu(); router.push("/"); }} className="mobile-btn">Home</button>
           <button onClick={() => { closeMenu(); router.push("/company/dashboard"); }} className="mobile-btn">Dashboard</button>
           <button onClick={() => { closeMenu(); router.push("/company/jobs/new"); }} className="mobile-btn">Post Job</button>
+          <button onClick={() => { closeMenu(); router.push("/blog"); }} className="mobile-btn">Blog</button>
           <button 
             onClick={() => { 
               closeMenu(); 
@@ -271,7 +276,6 @@ export default function Navbar() {
           gap: 12px;
           align-items: center;
         }
-        /* Base button styles – polished, rounded, with transition */
         .nav-btn, .active-btn, .primary-btn, .secondary-btn, .highlighted-btn, .logout-btn {
           background: transparent;
           border: none;
@@ -285,16 +289,13 @@ export default function Navbar() {
           align-items: center;
           gap: 6px;
         }
-        /* Hover effect: slight lift and shadow */
         .nav-btn:hover, .active-btn:hover, .primary-btn:hover, .secondary-btn:hover, .highlighted-btn:hover, .logout-btn:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-        /* Active (click) effect: scale down */
         .nav-btn:active, .active-btn:active, .primary-btn:active, .secondary-btn:active, .highlighted-btn:active, .logout-btn:active {
           transform: scale(0.96);
         }
-        /* Default nav button */
         .nav-btn {
           background: transparent;
           color: #cbd5e1;
@@ -303,7 +304,6 @@ export default function Navbar() {
           background: rgba(255,255,255,0.1);
           color: white;
         }
-        /* Active page button */
         .active-btn {
           background: #334155;
           color: white;
@@ -311,7 +311,6 @@ export default function Navbar() {
         .active-btn:hover {
           background: #3b4a63;
         }
-        /* Primary (Signup / Get Started) */
         .primary-btn {
           background: #2563eb;
           color: white;
@@ -319,7 +318,6 @@ export default function Navbar() {
         .primary-btn:hover {
           background: #1d4ed8;
         }
-        /* Secondary (Login) */
         .secondary-btn {
           background: transparent;
           border: 1px solid #2563eb;
@@ -328,7 +326,6 @@ export default function Navbar() {
         .secondary-btn:hover {
           background: rgba(37,99,235,0.1);
         }
-        /* Highlighted (Post Job) */
         .highlighted-btn {
           background: #f59e0b;
           color: #0f172a;
@@ -336,7 +333,6 @@ export default function Navbar() {
         .highlighted-btn:hover {
           background: #d97706;
         }
-        /* Logout button */
         .logout-btn {
           background: #dc2626;
           color: white;
@@ -344,7 +340,6 @@ export default function Navbar() {
         .logout-btn:hover {
           background: #b91c1c;
         }
-        /* Hamburger menu */
         .hamburger {
           display: none;
           flex-direction: column;
@@ -404,7 +399,6 @@ export default function Navbar() {
         .mobile-logout-btn:hover {
           background: #b91c1c;
         }
-        /* Bottom tab bar */
         .bottom-tab-bar {
           display: none;
           position: fixed;

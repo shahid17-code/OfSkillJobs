@@ -8,7 +8,6 @@ import Link from "next/link";
 type User = {
   id: string;
   email?: string;
-  // ... other fields
 };
 
 export default function HomeClient() {
@@ -16,32 +15,40 @@ export default function HomeClient() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function getData() {
-      try {
-        setLoading(true);
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError) throw new Error(authError.message);
-        setUser(user);
-        if (user) {
-          const { data, error: roleError } = await supabase
-            .from("users")
-            .select("role")
-            .eq("id", user.id)
-            .single();
-          if (roleError) throw new Error(roleError.message);
-          setRole(data?.role || null);
-        }
-      } catch (err: any) {
-        console.error("Auth error:", err);
-        setError(err.message || "Something went wrong");
-      } finally {
-        setLoading(false);
+    async function getUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        const { data } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        setRole(data?.role || null);
+      } else {
+        setRole(null);
       }
+      setLoading(false);
     }
-    getData();
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+      if (session?.user) {
+        supabase
+          .from("users")
+          .select("role")
+          .eq("id", session.user.id)
+          .single()
+          .then(({ data }) => setRole(data?.role || null));
+      } else {
+        setRole(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   async function handleGetHired() {
@@ -72,18 +79,8 @@ export default function HomeClient() {
     );
   }
 
-  if (error) {
-    return (
-      <div style={styles.errorContainer}>
-        <p>Something went wrong: {error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </div>
-    );
-  }
-
   return (
     <>
-      {/* Global styles for hover effects and mobile arrows */}
       <style>{`
         .btn-hover {
           transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -123,7 +120,6 @@ export default function HomeClient() {
       `}</style>
 
       <div style={styles.container}>
-        {/* Hero Section */}
         <div style={styles.hero}>
           <div style={styles.heroContent}>
             <div style={styles.brand}>
@@ -145,7 +141,6 @@ export default function HomeClient() {
           </div>
         </div>
 
-        {/* Task‑First Application Process (mobile‑friendly arrows) */}
         <div style={styles.taskFlow}>
           <h2 style={styles.sectionTitle}>How applying works</h2>
           <div style={styles.flowGrid}>
@@ -172,14 +167,12 @@ export default function HomeClient() {
           </div>
         </div>
 
-        {/* Social Proof Stats */}
         <div style={styles.statsBar}>
           <div><strong>50+</strong><br />Verified Companies</div>
           <div><strong>1000+</strong><br />Active Job Seekers</div>
           <div><strong>100+</strong><br />Successful Placements</div>
         </div>
 
-        {/* Trust Section */}
         <div style={styles.trustSection}>
           <h2 style={{ ...styles.sectionTitle, fontSize: "28px" }}>🔒 Why you can trust OfSkillJob</h2>
           <div style={styles.trustGrid}>
@@ -190,7 +183,6 @@ export default function HomeClient() {
           </div>
         </div>
 
-        {/* Community Links */}
         <div style={styles.communityBar}>
           <p style={styles.communityText}>Join our trusted community →</p>
           <div style={styles.communityLinks}>
@@ -206,7 +198,6 @@ export default function HomeClient() {
           </div>
         </div>
 
-        {/* How we're different */}
         <div style={styles.different}>
           <h2 style={styles.sectionTitle}>How we're different</h2>
           <div style={styles.diffGrid}>
@@ -233,7 +224,6 @@ export default function HomeClient() {
           </div>
         </div>
 
-        {/* Simple 3‑step journey */}
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>Simple 3‑step journey</h2>
           <div style={styles.grid3}>
@@ -255,7 +245,6 @@ export default function HomeClient() {
           </div>
         </div>
 
-        {/* Jobs for Everyone */}
         <div style={styles.sectionAlt}>
           <h2 style={styles.sectionTitle}>Jobs for Every Industry</h2>
           <p style={styles.sectionDesc}>From software development to digital marketing, sales, design, and more.</p>
@@ -269,7 +258,6 @@ export default function HomeClient() {
           </Link>
         </div>
 
-        {/* Final CTA */}
         <div style={styles.cta}>
           <h2>Ready to take the next step?</h2>
           <p>Join thousands of professionals who found their dream job through skills.</p>
@@ -283,7 +271,6 @@ export default function HomeClient() {
   );
 }
 
-// -- Styles (all same as original, with added loader & error styles) --
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     maxWidth: "1200px",
@@ -304,10 +291,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderTopColor: "#2563eb",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
-  },
-  errorContainer: {
-    textAlign: "center",
-    padding: "60px 20px",
   },
   hero: {
     display: "flex",
