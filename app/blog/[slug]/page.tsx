@@ -1,619 +1,309 @@
-// app/blog/[slug]/page.tsx
-import { getPostBySlug, getAllPosts } from '@/lib/blog';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { Metadata } from 'next';
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import type { Metadata } from "next";
+import blogData from "@/data/blog.json";
+import BlogScripts from "@/components/BlogScripts";
+import "./blog-post.css";
 
-export async function generateStaticParams() {
-  const posts = getAllPosts();
-  return posts.map((post) => ({ slug: post.slug }));
+type Props = {
+  params: Promise<{ slug: string }>;
+};
+
+type Post = {
+  slug: string;
+  title: string;
+  date: string;
+  description: string;
+  readingTime: string;
+  category: string;
+  heroStats?: Array<{ num: string; label: string }>;
+  htmlContent: string;
+};
+
+function getPost(slug: string): Post | undefined {
+  return (blogData.posts as Post[]).find((p) => p.slug === slug);
 }
 
-export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> }
-): Promise<Metadata> {
+export async function generateStaticParams() {
+  return blogData.posts.map((p) => ({ slug: p.slug }));
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
-  if (!post) return { title: 'Not Found' };
+  const post = getPost(slug);
+  if (!post) return { title: "Post not found — OfSkillJob Blog" };
   return {
     title: `${post.title} | OfSkillJob Blog`,
     description: post.description,
+    alternates: { canonical: `https://ofskilljobs.vercel.app/blog/${post.slug}` },
     openGraph: {
-      title: `${post.title} | OfSkillJob Blog`,
+      title: post.title,
       description: post.description,
-      url: `https://ofskilljobs.vercel.app/blog/${slug}`,
-      type: 'article',
+      type: "article",
       publishedTime: post.date,
-      authors: ['OfSkillJob'],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${post.title} | OfSkillJob Blog`,
-      description: post.description,
-    },
-    alternates: {
-      canonical: `https://ofskilljobs.vercel.app/blog/${slug}`,
     },
   };
 }
 
-// JSON-LD schema builders
-function buildBlogSchema(post: ReturnType<typeof getPostBySlug>) {
-  if (!post) return null;
-  return {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": post.title,
-    "description": post.description,
-    "author": { "@type": "Organization", "name": "OfSkillJob" },
-    "publisher": {
-      "@type": "Organization",
-      "name": "OfSkillJob",
-      "logo": { "@type": "ImageObject", "url": "https://ofskilljobs.vercel.app/favicon.png" }
-    },
-    "mainEntityOfPage": `https://ofskilljobs.vercel.app/blog/${post.slug}`,
-    "datePublished": post.date,
-    "dateModified": post.date,
-  };
-}
+const categoryColors: Record<string, { bg: string; color: string; glow: string }> = {
+  "Career Guide":    { bg: "#DCFCE7", color: "#166534", glow: "rgba(34,197,94,0.15)" },
+  "Hiring Insights": { bg: "#FEF3C7", color: "#92400E", glow: "rgba(245,158,11,0.15)" },
+  "Skill Tips":      { bg: "#DBEAFE", color: "#1D4ED8", glow: "rgba(59,130,246,0.15)" },
+  default:           { bg: "#F3F4F6", color: "#374151", glow: "rgba(107,114,128,0.10)" },
+};
 
-export default async function BlogPostPage(
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = getPost(slug);
   if (!post) notFound();
 
-  const blogSchema = buildBlogSchema(post);
+  const cat = categoryColors[post.category] ?? categoryColors.default;
+  const stats = post.heroStats;
+  const relatedPosts = (blogData.posts as Post[])
+    .filter((p) => p.slug !== post.slug)
+    .slice(0, 2);
 
   return (
-    <>
-      {/* ── Structured data ── */}
-      {blogSchema && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(blogSchema) }}
-        />
-      )}
+    <div className="blog-page">
+      <BlogScripts />
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@300;400;500;600&display=swap');
+      {/* ── HERO ── */}
+      <header className="blog-hero">
+        <div className="blog-hero-blob blog-hero-blob-1" aria-hidden="true" />
+        <div className="blog-hero-blob blog-hero-blob-2" aria-hidden="true" />
+        <div className="blog-hero-blob blog-hero-blob-3" aria-hidden="true" />
 
-        /* ── Root ── */
-        .bp-root {
-          font-family: 'DM Sans', sans-serif;
-          background: #F7F6F2;
-          min-height: 100vh;
-          color: #1C1C1E;
-        }
+        <div className="blog-hero-inner">
+          {/* Breadcrumb */}
+          <nav className="blog-hero-breadcrumb" aria-label="Breadcrumb">
+            <Link href="/">Home</Link>
+            <span className="blog-hero-breadcrumb-sep" aria-hidden="true">›</span>
+            <Link href="/blog">Blog</Link>
+            <span className="blog-hero-breadcrumb-sep" aria-hidden="true">›</span>
+            <span className="blog-hero-breadcrumb-cur">{post.category}</span>
+          </nav>
 
-        /* ── Hero ── */
-        .bp-hero {
-          background: #0F1923;
-          padding: 60px 24px 56px;
-          position: relative;
-          overflow: hidden;
-        }
-        .bp-hero::before {
-          content: '';
-          position: absolute;
-          top: -80px; right: -60px;
-          width: 360px; height: 360px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(245,158,11,0.10) 0%, transparent 70%);
-          pointer-events: none;
-        }
-        .bp-hero-inner {
-          max-width: 760px;
-          margin: 0 auto;
-          position: relative;
-          z-index: 1;
-        }
-        .bp-back {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          font-weight: 500;
-          color: rgba(250,250,248,0.50);
-          text-decoration: none;
-          margin-bottom: 28px;
-          transition: color 0.15s;
-        }
-        .bp-back:hover { color: #F59E0B; }
-        .bp-cat {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: rgba(245,158,11,0.15);
-          border: 1px solid rgba(245,158,11,0.30);
-          color: #F59E0B;
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.13em;
-          text-transform: uppercase;
-          padding: 5px 13px;
-          border-radius: 100px;
-          margin-bottom: 20px;
-        }
-        .bp-cat-dot {
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          background: #22C55E;
-          display: inline-block;
-        }
-        .bp-hero h1 {
-          font-family: 'Lora', Georgia, serif;
-          font-size: clamp(26px, 4.5vw, 44px);
-          font-weight: 700;
-          color: #FAFAF8;
-          line-height: 1.2;
-          letter-spacing: -0.02em;
-          margin: 0 0 18px;
-        }
-        .bp-desc {
-          font-size: 16px;
-          font-weight: 300;
-          color: rgba(250,250,248,0.60);
-          line-height: 1.65;
-          margin: 0 0 22px;
-          max-width: 580px;
-        }
-        .bp-meta {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-        .bp-meta-item {
-          font-size: 13px;
-          font-weight: 400;
-          color: rgba(250,250,248,0.45);
-          display: flex;
-          align-items: center;
-          gap: 5px;
-        }
-        .bp-meta-sep {
-          width: 3px; height: 3px;
-          border-radius: 50%;
-          background: rgba(250,250,248,0.20);
-        }
-
-        /* ── Layout ── */
-        .bp-layout {
-          max-width: 760px;
-          margin: 0 auto;
-          padding: 48px 24px 80px;
-        }
-
-        /* ── Progress bar ── */
-        .bp-progress {
-          position: fixed;
-          top: 0; left: 0;
-          height: 3px;
-          background: #F59E0B;
-          z-index: 100;
-          transition: width 0.1s linear;
-          width: 0%;
-        }
-
-        /* ── Article prose ── */
-        .bp-prose {
-          background: #FFFFFF;
-          border: 1px solid #E8E6E0;
-          border-radius: 20px;
-          padding: 44px 48px;
-          margin-bottom: 28px;
-          line-height: 1.75;
-        }
-        @media (max-width: 600px) {
-          .bp-prose { padding: 28px 22px; }
-          .bp-hero { padding: 48px 20px 44px; }
-        }
-
-        /* ── Post body HTML styles ── */
-        .post-body { font-size: 15.5px; color: #374151; }
-
-        .post-intro {
-          font-size: 17px;
-          color: #1F2937;
-          line-height: 1.80;
-          padding-bottom: 28px;
-          border-bottom: 1px solid #F0EDE7;
-          margin-bottom: 32px;
-        }
-        .post-intro p { margin: 0; }
-
-        .post-section {
-          margin-bottom: 40px;
-          scroll-margin-top: 24px;
-        }
-        .post-section:last-child { margin-bottom: 0; }
-
-        .post-section h2 {
-          font-family: 'Lora', Georgia, serif;
-          font-size: 24px;
-          font-weight: 700;
-          color: #0F1923;
-          letter-spacing: -0.02em;
-          margin: 0 0 14px;
-          line-height: 1.25;
-        }
-
-        .post-section h3 {
-          font-size: 14px;
-          font-weight: 700;
-          letter-spacing: 0.07em;
-          text-transform: uppercase;
-          color: #0F1923;
-          margin: 22px 0 10px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .post-section h3::before {
-          content: '';
-          display: inline-block;
-          width: 16px; height: 2px;
-          background: #F59E0B;
-          border-radius: 2px;
-          flex-shrink: 0;
-        }
-
-        .post-section p {
-          font-size: 15.5px;
-          color: #374151;
-          line-height: 1.78;
-          margin: 0 0 14px;
-        }
-        .post-section p:last-child { margin-bottom: 0; }
-        .post-section p.post-small {
-          font-size: 13.5px;
-          color: #9CA3AF;
-          font-style: italic;
-        }
-
-        .post-section ul,
-        .post-section ol {
-          margin: 0 0 14px;
-          padding: 0;
-          list-style: none;
-        }
-        .post-section li {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          font-size: 15px;
-          color: #374151;
-          line-height: 1.70;
-          padding: 7px 0;
-          border-bottom: 1px solid #F5F3EF;
-        }
-        .post-section li:last-child { border-bottom: none; }
-        .post-section ul li::before {
-          content: '';
-          display: inline-block;
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          background: #F59E0B;
-          flex-shrink: 0;
-          margin-top: 8px;
-        }
-        .post-section ol { counter-reset: ol-counter; }
-        .post-section ol li { counter-increment: ol-counter; }
-        .post-section ol li::before {
-          content: counter(ol-counter, decimal-leading-zero);
-          font-size: 11px;
-          font-weight: 700;
-          color: #C0BAB0;
-          flex-shrink: 0;
-          margin-top: 3px;
-          min-width: 20px;
-          font-variant-numeric: tabular-nums;
-        }
-        .post-section li strong { color: #0F1923; font-weight: 600; }
-        .post-section p strong { color: #0F1923; font-weight: 600; }
-
-        /* ── Callouts ── */
-        .post-callout {
-          border-radius: 12px;
-          padding: 18px 20px;
-          margin: 18px 0;
-        }
-        .post-callout p { font-size: 14.5px !important; margin: 0 !important; line-height: 1.65 !important; }
-        .post-callout-amber {
-          background: rgba(245,158,11,0.07);
-          border: 1px solid rgba(245,158,11,0.25);
-          border-left: 3px solid #F59E0B;
-        }
-        .post-callout-amber p { color: #78350F !important; }
-        .post-callout-navy {
-          background: #0F1923;
-          border: 1px solid rgba(255,255,255,0.06);
-        }
-        .post-callout-navy p { color: rgba(250,250,248,0.85) !important; }
-        .post-callout-green {
-          background: rgba(34,197,94,0.06);
-          border: 1px solid rgba(34,197,94,0.20);
-          border-left: 3px solid #22C55E;
-        }
-        .post-callout-green p { color: #14532D !important; }
-
-        /* ── Table ── */
-        .post-table-wrap {
-          overflow-x: auto;
-          margin: 14px 0;
-          border-radius: 12px;
-          border: 1px solid #E8E6E0;
-        }
-        .post-table-wrap table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 14px;
-        }
-        .post-table-wrap th {
-          background: #0F1923;
-          color: rgba(250,250,248,0.80);
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.09em;
-          text-transform: uppercase;
-          padding: 12px 16px;
-          text-align: left;
-          white-space: nowrap;
-        }
-        .post-table-wrap td {
-          padding: 11px 16px;
-          border-bottom: 1px solid #F0EDE7;
-          color: #374151;
-          font-size: 14px;
-          line-height: 1.5;
-        }
-        .post-table-wrap tr:last-child td { border-bottom: none; }
-        .post-table-wrap tr:nth-child(even) td { background: #FAFAF8; }
-
-        /* ── Timeline ── */
-        .post-timeline { display: grid; gap: 14px; margin: 14px 0; }
-        .post-timeline-item {
-          display: flex;
-          gap: 16px;
-          align-items: flex-start;
-          background: #F7F6F2;
-          border: 1px solid #E8E6E0;
-          border-radius: 12px;
-          padding: 16px 18px;
-        }
-        .post-timeline-dot {
-          background: #0F1923;
-          color: #F59E0B;
-          font-size: 11px;
-          font-weight: 700;
-          padding: 6px 10px;
-          border-radius: 8px;
-          flex-shrink: 0;
-          letter-spacing: 0.05em;
-          white-space: nowrap;
-          align-self: flex-start;
-          margin-top: 1px;
-        }
-        .post-timeline-item > div { font-size: 14.5px; color: #374151; line-height: 1.65; }
-        .post-timeline-item strong { color: #0F1923; display: block; margin-bottom: 8px; font-size: 15px; }
-        .post-timeline-item ul { margin: 0; padding: 0; list-style: none; }
-        .post-timeline-item li {
-          font-size: 14px;
-          color: #6B7280;
-          padding: 4px 0;
-          border: none;
-          display: flex;
-          gap: 8px;
-          align-items: flex-start;
-        }
-        .post-timeline-item li::before {
-          content: '–';
-          color: #C0BAB0;
-          flex-shrink: 0;
-        }
-
-        /* ── FAQ ── */
-        .post-faq { display: grid; gap: 14px; }
-        .post-faq-item {
-          background: #F7F6F2;
-          border: 1px solid #E8E6E0;
-          border-radius: 12px;
-          padding: 18px 20px;
-        }
-        .post-faq-item h3 {
-          font-family: 'Lora', Georgia, serif;
-          font-size: 16px !important;
-          font-weight: 600;
-          color: #0F1923;
-          margin: 0 0 8px !important;
-          letter-spacing: -0.01em;
-          text-transform: none !important;
-          text-decoration: none;
-        }
-        .post-faq-item h3::before { display: none !important; }
-        .post-faq-item p {
-          font-size: 14.5px !important;
-          color: #6B7280;
-          margin: 0 !important;
-          line-height: 1.65;
-        }
-
-        /* ── Links in post ── */
-        .post-body a {
-          color: #F59E0B;
-          text-decoration: none;
-          border-bottom: 1px solid rgba(245,158,11,0.35);
-          font-weight: 500;
-          transition: border-color 0.15s;
-        }
-        .post-body a:hover { border-color: #F59E0B; }
-
-        /* ── Red flag list items ── */
-        .post-section li:has(.flag) { }
-
-        /* ── Section divider ── */
-        .post-section + .post-section {
-          border-top: 1px solid #F0EDE7;
-          padding-top: 36px;
-        }
-
-        /* ── CTA card ── */
-        .bp-cta {
-          background: #0F1923;
-          border-radius: 20px;
-          padding: 44px 40px;
-          text-align: center;
-          margin-bottom: 28px;
-          position: relative;
-          overflow: hidden;
-        }
-        .bp-cta::before {
-          content: '';
-          position: absolute;
-          top: -60px; right: -60px;
-          width: 240px; height: 240px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%);
-          pointer-events: none;
-        }
-        .bp-cta h2 {
-          font-family: 'Lora', Georgia, serif;
-          font-size: 26px;
-          font-weight: 700;
-          color: #FAFAF8;
-          letter-spacing: -0.02em;
-          margin: 0 0 10px;
-          position: relative;
-          z-index: 1;
-        }
-        .bp-cta p {
-          font-size: 15px;
-          font-weight: 300;
-          color: rgba(250,250,248,0.55);
-          margin: 0 0 28px;
-          line-height: 1.65;
-          position: relative;
-          z-index: 1;
-        }
-        .bp-cta-btns {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-          flex-wrap: wrap;
-          position: relative;
-          z-index: 1;
-        }
-        .bp-cta-primary {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: #F59E0B;
-          color: #0F1923;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 14.5px;
-          font-weight: 700;
-          padding: 13px 26px;
-          border-radius: 100px;
-          text-decoration: none;
-          transition: transform 0.15s, background 0.15s;
-          border: none;
-        }
-        .bp-cta-primary:hover { transform: translateY(-1px); background: #FBB224; }
-        .bp-cta-secondary {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: transparent;
-          color: rgba(250,250,248,0.75);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 14.5px;
-          font-weight: 600;
-          padding: 13px 26px;
-          border-radius: 100px;
-          text-decoration: none;
-          border: 1.5px solid rgba(255,255,255,0.18);
-          transition: border-color 0.15s, color 0.15s;
-        }
-        .bp-cta-secondary:hover { border-color: rgba(255,255,255,0.45); color: #FAFAF8; }
-
-        /* ── Footer ── */
-        .bp-footer {
-          border-top: 1px solid #E8E6E0;
-          padding-top: 24px;
-          text-align: center;
-          font-size: 12px;
-          color: #C0BAB0;
-          letter-spacing: 0.02em;
-        }
-      `}</style>
-
-      <div className="bp-root">
-
-        {/* ── Hero ── */}
-        <div className="bp-hero">
-          <div className="bp-hero-inner">
-            <Link href="/blog" className="bp-back">← All articles</Link>
-            <div className="bp-cat">
-              <span className="bp-cat-dot" />
-              {(post as any).category || 'Guide'}
-            </div>
-            <h1>{post.title}</h1>
-            <p className="bp-desc">{post.description}</p>
-            <div className="bp-meta">
-              <span className="bp-meta-item">{post.date}</span>
-              <div className="bp-meta-sep" />
-              <span className="bp-meta-item">{post.readingTime}</span>
-              <div className="bp-meta-sep" />
-              <span className="bp-meta-item">By OfSkillJob</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Article ── */}
-        <div className="bp-layout">
-
-          {/* Prose content */}
-          <div className="bp-prose">
-            <div dangerouslySetInnerHTML={{ __html: post.htmlContent }} />
-          </div>
-
-          {/* CTA */}
-          <div className="bp-cta">
-            <h2>Ready to find your remote job?</h2>
-            <p>Browse skill-first remote listings updated daily — apply only after proving your ability.</p>
-            <div className="bp-cta-btns">
-              <Link href="/jobs" className="bp-cta-primary">Browse Remote Jobs →</Link>
-              <Link href="/signup" className="bp-cta-secondary">Create Free Profile</Link>
-            </div>
-          </div>
-
-          {/* Back link */}
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <Link
-              href="/blog"
+          {/* Meta row */}
+          <div className="blog-hero-meta">
+            <span
+              className="blog-hero-tag"
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#6B7280',
-                textDecoration: 'none',
-                borderBottom: '1px solid #E8E6E0',
-                paddingBottom: 2,
+                background: cat.glow,
+                borderColor: cat.color + "40",
+                color: cat.color,
               }}
             >
-              ← Back to all articles
+              <span className="live-dot" aria-hidden="true" />
+              {post.category}
+            </span>
+            <span className="blog-hero-sep" aria-hidden="true">·</span>
+            <span className="blog-hero-date">
+              <time dateTime={post.date}>{post.date}</time>
+            </span>
+            <span className="blog-hero-sep" aria-hidden="true">·</span>
+            <span className="blog-hero-read-time" id="live-read-time">
+              {post.readingTime}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h1
+            dangerouslySetInnerHTML={{
+              __html: post.title
+                .replace(/\u201C/g, "<em>\u201C</em>")
+                .replace(/\u201D/g, "<em>\u201D</em>"),
+            }}
+          />
+
+          {/* Deck */}
+          <p className="blog-hero-deck">{post.description}</p>
+
+          {/* Stats */}
+          {stats && stats.length > 0 && (
+            <div className="blog-hero-stats" aria-label="Key statistics">
+              {stats.map((s) => (
+                <div className="blog-hero-stat" key={s.num}>
+                  <span className="blog-hero-stat-num">{s.num}</span>
+                  <span className="blog-hero-stat-label">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Share row */}
+          <div className="blog-hero-share">
+            <span className="blog-hero-share-label">Share</span>
+            <button
+              className="blog-share-btn"
+              data-share="twitter"
+              aria-label="Share on Twitter / X"
+              type="button"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
+              </svg>
+              Twitter
+            </button>
+            <button
+              className="blog-share-btn"
+              data-share="linkedin"
+              aria-label="Share on LinkedIn"
+              type="button"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+              </svg>
+              LinkedIn
+            </button>
+            <button
+              className="blog-share-btn"
+              data-share="copy"
+              aria-label="Copy article link"
+              type="button"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+              </svg>
+              Copy link
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── PAGE BODY ── */}
+      <div className="blog-page-wrap">
+
+        {/* ── ARTICLE ── */}
+        <article className="blog-article" id="blogArticle">
+          {/* Post HTML from blog.json */}
+          <div dangerouslySetInnerHTML={{ __html: post.htmlContent }} />
+
+          {/* Inline CTA */}
+          <div className="cta-banner">
+            <h3>OfSkillJob works exactly this way</h3>
+            <p>
+              Every application starts with a real task. Companies see proof of skill before they see a
+              résumé — no résumé black holes, no keyword filtering.
+            </p>
+            {/* ✅ FIX: button styles added inline to guarantee visibility */}
+            <Link
+              href="/signup"
+              className="cta-btn"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                background: "#F59E0B",
+                color: "#0F1923",
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                padding: "0.85rem 1.8rem",
+                borderRadius: "100px",
+                textDecoration: "none",
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: "0 4px 12px rgba(245,158,11,0.3)",
+                position: "relative",
+                zIndex: 10,
+              }}
+            >
+              Show your skill — sign up free
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+            <p className="cta-sub">100% free for job seekers · No hidden fees · Remote team from India</p>
+          </div>
+
+          {/* Related posts */}
+          {relatedPosts.length > 0 && (
+            <div className="related-posts-section">
+              <div className="related-posts-header">
+                <h2 className="related-posts-title">More from the blog</h2>
+                <div className="related-posts-line" aria-hidden="true" />
+              </div>
+              <div className="related-posts-grid">
+                {relatedPosts.map((rp) => (
+                  <Link key={rp.slug} href={`/blog/${rp.slug}`} className="related-post-card">
+                    <span className="related-post-cat">{rp.category}</span>
+                    <h3 className="related-post-title">{rp.title}</h3>
+                    <div className="related-post-meta">
+                      <span>{rp.date}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{rp.readingTime}</span>
+                      <span className="related-post-arrow" aria-hidden="true">→</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </article>
+
+        {/* ── SIDEBAR ── */}
+        <aside className="blog-sidebar" aria-label="Article sidebar">
+
+          {/* TOC — dynamically populated by BlogScripts */}
+          <div className="blog-sidebar-card">
+            <span className="blog-sidebar-label">In this article</span>
+            <div id="dynamic-toc">
+              <a href="#" className="toc-link" style={{ color: "#C0BAB0", fontSize: "12px", fontStyle: "italic" }}>
+                <div className="toc-dot" aria-hidden="true" />
+                Loading contents…
+              </a>
+            </div>
+          </div>
+
+          {/* Key data points */}
+          {stats && stats.length > 0 && (
+            <div className="blog-sidebar-card">
+              <span className="blog-sidebar-label">Key data points</span>
+              {stats.map((s) => (
+                <div className="blog-sidebar-stat" key={s.num}>
+                  <span className="blog-sidebar-stat-num">{s.num}</span>
+                  <span className="blog-sidebar-stat-label">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* CTA card */}
+          <div className="blog-sidebar-cta">
+            <span className="blog-sidebar-cta-label">Try skill-first hiring</span>
+            <p>
+              OfSkillJob lets candidates prove ability with a real task before applying. Companies
+              only see proven skill.
+            </p>
+            <Link href="/signup" className="blog-sidebar-cta-btn">
+              Sign up free →
             </Link>
           </div>
 
-          <div className="bp-footer">
-            © 2026 OfSkillJob — Show Skills. Get Hired. All rights reserved.
+          {/* Quick links */}
+          <div className="blog-sidebar-card">
+            <span className="blog-sidebar-label">OfSkillJob</span>
+            <p style={{ fontSize: "13px", color: "#6B7280", lineHeight: "1.62", marginBottom: "16px" }}>
+              We replace résumé filtering with real skill tasks — so every hire is based on what a
+              candidate can actually do, right now.
+            </p>
+            {[
+              { href: "/jobs",    label: "Browse open jobs" },
+              { href: "/about",   label: "About us" },
+              { href: "/blog",    label: "More articles" },
+              { href: "/contact", label: "Contact Shahid" },
+              { href: "/privacy", label: "Privacy policy" },
+            ].map((l) => (
+              <Link key={l.href} href={l.href} className="sidebar-quick-link">
+                {l.label}
+                <span className="sidebar-quick-arrow" aria-hidden="true">›</span>
+              </Link>
+            ))}
           </div>
-        </div>
+
+        </aside>
       </div>
-    </>
+    </div>
   );
 }
