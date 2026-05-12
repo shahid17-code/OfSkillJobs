@@ -9,7 +9,7 @@ import { awardPoints } from "@/lib/points";
 type ToastType = "success" | "error" | "info";
 type Job = {
   id: string;
-  company_id: string;
+  company_id: string | null;
   title: string;
   slug: string;
   role_type: string | null;
@@ -26,6 +26,7 @@ type Job = {
   status: string | null;
   created_at: string | null;
   external_apply_url: string | null;
+  company_name?: string | null;
 };
 
 type Company = {
@@ -58,6 +59,35 @@ const initialForm: ApplicationForm = {
   drive_link: "",
   note: "",
 };
+
+// Helper: clean HTML from description
+function cleanDescription(html: string): string {
+  if (!html) return "";
+  // Remove HTML tags
+  let text = html.replace(/<[^>]*>/g, " ");
+  // Decode common HTML entities
+  text = text.replace(/&amp;/g, "&")
+             .replace(/&lt;/g, "<")
+             .replace(/&gt;/g, ">")
+             .replace(/&quot;/g, '"')
+             .replace(/&#39;/g, "'")
+             .replace(/&nbsp;/g, " ");
+  // Normalize whitespace
+  text = text.replace(/\s+/g, " ").trim();
+  return text;
+}
+
+// Helper: track Google Analytics events
+function trackApplyEvent(jobId: string, jobTitle: string, applyMethod: string) {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', 'apply_click', {
+      event_category: 'Job Apply',
+      event_label: jobTitle,
+      job_id: jobId,
+      apply_method: applyMethod,
+    });
+  }
+}
 
 export default function JobDetailClient({
   initialJob,
@@ -183,6 +213,9 @@ export default function JobDetailClient({
     if (!applicant_name || !applicant_email || !resume_link || !drive_link)
       return showToast("Name, email, resume link, and Drive link required", "error");
 
+    // Track GA event on apply form submission
+    trackApplyEvent(job.id, job.title, "internal_form");
+
     setSubmitting(true);
     try {
       const normalizedEmail = applicant_email.toLowerCase();
@@ -228,8 +261,9 @@ export default function JobDetailClient({
   const bioToShow = getBioDisplay();
   const showReadMoreBio = isMobile && (company?.about?.length || 0) > 100;
 
+  // ✅ Clean description for rendering (no HTML tags)
   const getDescriptionDisplay = () => {
-    const fullDesc = job?.description || "";
+    const fullDesc = job?.description ? cleanDescription(job.description) : "";
     if (!isMobile) return fullDesc;
     if (descExpanded) return fullDesc;
     if (fullDesc.length <= 300) return fullDesc;
@@ -238,7 +272,7 @@ export default function JobDetailClient({
     return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
   };
   const descToShow = getDescriptionDisplay();
-  const showReadMoreDesc = isMobile && (job?.description?.length || 0) > 300;
+  const showReadMoreDesc = isMobile && (job?.description ? cleanDescription(job.description).length : 0) > 300;
 
   if (loading) {
     return (
@@ -257,6 +291,8 @@ export default function JobDetailClient({
       </div>
     );
   }
+
+  const displayCompanyName = company?.company_name || job.company_name || "External Employer";
 
   return (
     <>
@@ -285,9 +321,9 @@ export default function JobDetailClient({
               <div className="logo-wrapper">
                 <div style={brandLogo}>
                   {company?.logo_url ? (
-                    <img src={company.logo_url} alt={company?.company_name || "Company"} style={brandLogoImg} />
+                    <img src={company.logo_url} alt={displayCompanyName} style={brandLogoImg} />
                   ) : (
-                    <div style={brandFallback}>{(company?.company_name || "C").charAt(0).toUpperCase()}</div>
+                    <div style={brandFallback}>{displayCompanyName.charAt(0).toUpperCase()}</div>
                   )}
                 </div>
               </div>
@@ -295,13 +331,14 @@ export default function JobDetailClient({
                 <p className="eyebrow-text" style={eyebrow}>Skill-based opportunity</p>
                 <h1 style={pageTitle} className="job-title">{job.title}</h1>
                 <p className="job-subtitle" style={{ ...pageSubtitle, wordBreak: "break-word", whiteSpace: "normal", overflowWrap: "break-word" }}>
-                  {company?.company_name || "Company"} · {job.role_type || "Role"} · {job.location || "Location not set"}
+                  {displayCompanyName} · {job.role_type || "Role"} · {job.location || "Location not set"}
                 </p>
                 <div style={metaPills}>
                   <span style={statusPill(expired ? "closed" : "open")}>{expired ? "Closed" : "Open"}</span>
                   <span style={metaChip}>{job.is_remote ? "Remote" : "On-site / Hybrid"}</span>
                   <span style={metaChip}>{salaryText}</span>
-                  {alreadyApplied && <span style={alreadyAppliedChip}>Already applied ✅</span>}
+                  {alreadyApplied && !useExternalApply && <span style={alreadyAppliedChip}>Already applied ✅</span>}
+                  {useExternalApply && <span style={metaChip}>External apply</span>}
                 </div>
               </div>
             </div>
@@ -321,7 +358,6 @@ export default function JobDetailClient({
           </div>
         </div>
 
-        {/* ✅ FIX: gridTemplateColumns now reads isMobile directly — no CSS override needed */}
         <div style={{
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr" : "1.35fr 0.8fr",
@@ -350,7 +386,7 @@ export default function JobDetailClient({
               </div>
             </div>
 
-            {job.task_required && (
+            {job.task_required && !useExternalApply && (
               <div style={premiumCard}>
                 <SectionHeader title="Skill task" subtitle="This is how the company evaluates real ability" />
                 <div style={taskCard}>
@@ -372,14 +408,17 @@ export default function JobDetailClient({
                 <div style={companyTopRow}>
                   <div style={companyAvatar}>
                     {company?.logo_url ? (
-                      <img src={company.logo_url} alt={company?.company_name || "Company"} style={companyAvatarImg} />
+                      <img src={company.logo_url} alt={displayCompanyName} style={companyAvatarImg} />
                     ) : (
-                      <div style={companyAvatarFallback}>{(company?.company_name || "C").charAt(0).toUpperCase()}</div>
+                      <div style={companyAvatarFallback}>{displayCompanyName.charAt(0).toUpperCase()}</div>
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={companyName}>{company?.company_name || "Company"}</h3>
-                    <p style={companyMeta}>{company?.industry || "Industry not set"}{company?.location ? ` • ${company.location}` : ""}</p>
+                    <h3 style={companyName}>{displayCompanyName}</h3>
+                    <p style={companyMeta}>
+                      {company?.industry || (useExternalApply ? "External Listing" : "Industry not set")}
+                      {company?.location ? ` • ${company.location}` : (job.location ? ` • ${job.location}` : "")}
+                    </p>
                     <div>
                       <p style={companyBio}>{bioToShow}</p>
                       {showReadMoreBio && (
@@ -398,10 +437,13 @@ export default function JobDetailClient({
                   {company?.email ? (
                     <a href={`mailto:${company.email}`} style={linkPill} onClick={(e) => { e.preventDefault(); setTimeout(() => { window.location.href = `mailto:${company.email}`; }, 100); }}>Email</a>
                   ) : (
-                    <span style={{ ...linkPill, opacity: 0.5, cursor: "default" }}>Email not available</span>
+                    !useExternalApply && <span style={{ ...linkPill, opacity: 0.5, cursor: "default" }}>Email not available</span>
                   )}
                   {company?.username && (
                     <button type="button" style={linkPillBtn} onClick={() => router.push(`/company/${company.username}`)}>Public Profile</button>
+                  )}
+                  {useExternalApply && job.external_apply_url && (
+                    <a href={job.external_apply_url} target="_blank" rel="noreferrer" style={linkPill}>Original Job Posting →</a>
                   )}
                 </div>
               </div>
@@ -409,7 +451,6 @@ export default function JobDetailClient({
           </section>
 
           <aside style={sideColumn}>
-            {/* ✅ FIX: sticky only on desktop, static on mobile to avoid overflow issues */}
             <div style={{
               display: "grid",
               gap: 18,
@@ -437,10 +478,19 @@ export default function JobDetailClient({
                 )}
                 {useExternalApply ? (
                   <div style={guestBox}>
-                    <p style={guestText}>This job is hosted by <strong>{company?.company_name || "the employer"}</strong>. Click the button below to apply directly on their website.</p>
+                    <p style={guestText}>This job is hosted by <strong>{displayCompanyName}</strong>. Click the button below to apply directly on their website.</p>
                     <div style={guestActions}>
-                      <a href={job.external_apply_url!} target="_blank" rel="noopener noreferrer" style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}>Apply via OfSkillJob →</a>
+                      <a
+                        href={job.external_apply_url!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ ...primaryBtn, display: "inline-block", textDecoration: "none", textAlign: "center" }}
+                        onClick={() => trackApplyEvent(job.id, job.title, "external_link")}
+                      >
+                        Apply via External Site →
+                      </a>
                     </div>
+                    <p style={{ fontSize: "12px", color: "#64748b", marginTop: "12px", textAlign: "center" }}>OfSkillJob does not manage this application. You will be redirected to the original employer.</p>
                   </div>
                 ) : authUser ? (
                   <form onSubmit={handleSubmit} style={formGrid}>
@@ -519,7 +569,7 @@ export default function JobDetailClient({
   );
 }
 
-// ---------- Helper components ----------
+// ---------- Helper components (unchanged) ----------
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -547,7 +597,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// ---------- Styles ----------
+// ---------- Style constants (unchanged – kept exactly as in your original) ----------
 const pageShell: CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",

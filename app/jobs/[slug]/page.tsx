@@ -39,11 +39,16 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
 
   if (!job || job.status !== "active") notFound();
 
-  const { data: company } = await supabase
-    .from("users")
-    .select("company_name, username, industry, location, phone, email, logo_url, cover_url, about, website")
-    .eq("id", job.company_id)
-    .maybeSingle();
+  // ✅ Only fetch company if job has a company_id (normal jobs)
+  let company = null;
+  if (job.company_id) {
+    const { data: companyData } = await supabase
+      .from("users")
+      .select("company_name, username, industry, location, phone, email, logo_url, cover_url, about, website")
+      .eq("id", job.company_id)
+      .maybeSingle();
+    company = companyData;
+  }
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -69,8 +74,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
     employmentType: job.role_type?.toUpperCase(),
     hiringOrganization: {
       "@type": "Organization",
-      name: company?.company_name,
-      sameAs: company?.website,
+      name: company?.company_name || job.company_name || "External Employer",
+      sameAs: company?.website || null,
     },
     jobLocation: {
       "@type": "Place",
@@ -102,6 +107,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ slug
         unitText: "MONTH",
       },
     };
+  }
+
+  // ✅ For curated external jobs, set applyUrl explicitly
+  if (job.external_apply_url) {
+    structuredData.applyUrl = job.external_apply_url;
   }
 
   return (
