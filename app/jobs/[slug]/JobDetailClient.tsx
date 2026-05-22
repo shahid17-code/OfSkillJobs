@@ -5,6 +5,7 @@ import type { ChangeEvent, CSSProperties, FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { awardPoints } from "@/lib/points";
+import { trackJobDetailView } from "@/lib/analytics";
 
 type ToastType = "success" | "error" | "info";
 type Job = {
@@ -60,24 +61,6 @@ const initialForm: ApplicationForm = {
   note: "",
 };
 
-// Helper: clean HTML from description
-function cleanDescription(html: string): string {
-  if (!html) return "";
-  // Remove HTML tags
-  let text = html.replace(/<[^>]*>/g, " ");
-  // Decode common HTML entities
-  text = text.replace(/&amp;/g, "&")
-             .replace(/&lt;/g, "<")
-             .replace(/&gt;/g, ">")
-             .replace(/&quot;/g, '"')
-             .replace(/&#39;/g, "'")
-             .replace(/&nbsp;/g, " ");
-  // Normalize whitespace
-  text = text.replace(/\s+/g, " ").trim();
-  return text;
-}
-
-// Helper: track Google Analytics events
 function trackApplyEvent(jobId: string, jobTitle: string, applyMethod: string) {
   if (typeof window !== 'undefined' && (window as any).gtag) {
     (window as any).gtag('event', 'apply_click', {
@@ -86,6 +69,23 @@ function trackApplyEvent(jobId: string, jobTitle: string, applyMethod: string) {
       job_id: jobId,
       apply_method: applyMethod,
     });
+  }
+}
+
+// Convert plain text with newlines to HTML paragraphs
+function formatDescription(text: string): string {
+  if (!text) return "";
+  // Check if text already contains HTML tags
+  if (/<[^>]*>/.test(text)) {
+    // If HTML exists, return as is (but sanitize if needed – trusted content)
+    return text;
+  }
+  // Otherwise, convert newlines to <br> and wrap paragraphs
+  const paragraphs = text.split(/\n\s*\n/);
+  if (paragraphs.length > 1) {
+    return paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+  } else {
+    return text.replace(/\n/g, '<br>');
   }
 }
 
@@ -111,8 +111,13 @@ export default function JobDetailClient({
   const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [descExpanded, setDescExpanded] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+
+  useEffect(() => {
+    if (job) {
+      trackJobDetailView(job.id, job.title, !!job.external_apply_url);
+    }
+  }, [job]);
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -213,7 +218,6 @@ export default function JobDetailClient({
     if (!applicant_name || !applicant_email || !resume_link || !drive_link)
       return showToast("Name, email, resume link, and Drive link required", "error");
 
-    // Track GA event on apply form submission
     trackApplyEvent(job.id, job.title, "internal_form");
 
     setSubmitting(true);
@@ -255,24 +259,11 @@ export default function JobDetailClient({
     const fullBio = company?.about || "This company profile has not been completed yet. Check back soon for more details.";
     if (!isMobile) return fullBio;
     if (bioExpanded) return fullBio;
-    if (fullBio.length <= 100) return fullBio;
-    return fullBio.slice(0, 100) + "...";
+    if (fullBio.length <= 150) return fullBio;
+    return fullBio.slice(0, 150) + "...";
   };
   const bioToShow = getBioDisplay();
-  const showReadMoreBio = isMobile && (company?.about?.length || 0) > 100;
-
-  // ✅ Clean description for rendering (no HTML tags)
-  const getDescriptionDisplay = () => {
-    const fullDesc = job?.description ? cleanDescription(job.description) : "";
-    if (!isMobile) return fullDesc;
-    if (descExpanded) return fullDesc;
-    if (fullDesc.length <= 300) return fullDesc;
-    const truncated = fullDesc.slice(0, 300);
-    const lastSpace = truncated.lastIndexOf(" ");
-    return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
-  };
-  const descToShow = getDescriptionDisplay();
-  const showReadMoreDesc = isMobile && (job?.description ? cleanDescription(job.description).length : 0) > 300;
+  const showReadMoreBio = isMobile && (company?.about?.length || 0) > 150;
 
   if (loading) {
     return (
@@ -293,6 +284,9 @@ export default function JobDetailClient({
   }
 
   const displayCompanyName = company?.company_name || job.company_name || "External Employer";
+
+  // Format description with proper line breaks
+  const formattedDescription = formatDescription(job.description);
 
   return (
     <>
@@ -364,20 +358,15 @@ export default function JobDetailClient({
           gap: 18,
           alignItems: "start",
         }}>
+          {/* LEFT COLUMN */}
           <section style={mainColumn}>
+            {/* About this role – with proper line breaks */}
             <div style={premiumCard}>
               <SectionHeader title="About this role" subtitle="A clear view of what the company needs" />
-              <div>
-                <div style={{ ...bodyText, whiteSpace: "pre-wrap" }}>{descToShow}</div>
-                {showReadMoreDesc && (
-                  <button
-                    onClick={() => setDescExpanded(!descExpanded)}
-                    style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 8, textDecoration: "underline" }}
-                  >
-                    {descExpanded ? "Read less" : "Read more"}
-                  </button>
-                )}
-              </div>
+              <div
+                dangerouslySetInnerHTML={{ __html: formattedDescription }}
+                style={{ ...bodyText, whiteSpace: "pre-wrap" }}
+              />
               <div style={detailGrid}>
                 <InfoBox label="Task-based hiring" value={job.task_required ? "Yes" : "No"} />
                 <InfoBox label="Expiry" value={job.expires_at ? new Date(job.expires_at).toLocaleDateString() : "No expiry"} />
@@ -402,6 +391,7 @@ export default function JobDetailClient({
               </div>
             )}
 
+            {/* Company snapshot – removed the "Original Job Posting" link */}
             <div style={premiumCard}>
               <SectionHeader title="Company snapshot" subtitle="A quick look at who you are applying to" />
               <div style={companyCard}>
@@ -442,14 +432,12 @@ export default function JobDetailClient({
                   {company?.username && (
                     <button type="button" style={linkPillBtn} onClick={() => router.push(`/company/${company.username}`)}>Public Profile</button>
                   )}
-                  {useExternalApply && job.external_apply_url && (
-                    <a href={job.external_apply_url} target="_blank" rel="noreferrer" style={linkPill}>Original Job Posting →</a>
-                  )}
                 </div>
               </div>
             </div>
           </section>
 
+          {/* RIGHT COLUMN – Apply card (sticky) */}
           <aside style={sideColumn}>
             <div style={{
               display: "grid",
@@ -597,7 +585,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// ---------- Style constants (unchanged – kept exactly as in your original) ----------
+// ---------- Style constants (unchanged) ----------
 const pageShell: CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",

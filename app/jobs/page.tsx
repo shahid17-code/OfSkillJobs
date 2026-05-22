@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Head from "next/head";
 import { supabase } from "@/lib/supabase";
+import { trackJobListView, trackSearch, trackFilterChange, trackRefresh } from "@/lib/analytics";
 
 type JobRow = {
   id: string;
@@ -104,6 +105,13 @@ export default function JobsPage() {
 
   useEffect(() => { loadJobs(); }, []);
 
+  // ✅ Track job list view when jobs or filter changes
+  useEffect(() => {
+    if (!loading && jobs.length > 0) {
+      trackJobListView(jobs.length, activeFilter);
+    }
+  }, [jobs, activeFilter, loading]);
+
   async function loadJobs() {
     try {
       setLoading(true);
@@ -170,6 +178,27 @@ export default function JobsPage() {
     external: jobs.filter(j => j.is_curated).length,
     companies: new Set(jobs.map(j => j.company_id).filter(Boolean)).size,
   }), [jobs]);
+
+  // ✅ Handle search with tracking
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearch(value);
+    if (value.trim()) {
+      trackSearch(value.trim(), activeFilter);
+    }
+  };
+
+  // ✅ Handle filter change with tracking
+  const handleFilterChange = (filter: "all" | "task" | "remote" | "external") => {
+    setActiveFilter(filter);
+    trackFilterChange(filter);
+  };
+
+  // ✅ Handle refresh click
+  const handleRefresh = () => {
+    trackRefresh();
+    loadJobs();
+  };
 
   // ── SEO schemas (unchanged) ──
   const listSchema = useMemo(() => {
@@ -274,7 +303,6 @@ export default function JobsPage() {
           .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .jobs-grid  { grid-template-columns: 1fr !important; }
           .toolbar-row { flex-direction: column !important; }
-          /* Filter chips become 2×2 grid on mobile */
           .filter-row { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; flex-wrap: unset !important; }
           .filter-row button { width: 100% !important; text-align: center !important; }
           .hero-title { font-size: 28px !important; }
@@ -337,18 +365,18 @@ export default function JobsPage() {
               <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15, pointerEvents: "none", color: "#94a3b8" }}>🔍</span>
               <input
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={handleSearchChange}
                 placeholder="Search by title, company, location, role…"
-                style={{ width: "100%", border: "1px solid #dbe3ee", borderRadius: 14, padding: "12px 14px 12px 40px", outline: "none", fontSize: 14, background: "white", color: "#0f172a", boxSizing: "border-box", boxShadow: "0 4px 12px rgba(2,6,23,.04)" }}
+                style={{ width: "100%", border: "1px solid #dbe3ee", borderRadius: 14, padding: "8px 12px 14px 40px", outline: "none", fontSize: 14, background: "white", color: "#0f172a", boxSizing: "border-box", boxShadow: "0 4px 12px rgba(2,6,23,.04)" }}
               />
             </div>
-            <button type="button" className="osj-btn" onClick={loadJobs}
+            <button type="button" className="osj-btn" onClick={handleRefresh}
               style={{ background: "#2563eb", color: "white", border: "none", padding: "12px 18px", borderRadius: 14, cursor: "pointer", fontWeight: 800, fontSize: 14, whiteSpace: "nowrap", boxShadow: "0 6px 18px rgba(37,99,235,.28)" }}>
               ↻ Refresh
             </button>
           </div>
 
-          {/* Filter chips – now with "All Jobs", "Task-based", "Remote", "External" exactly as requested */}
+          {/* Filter chips */}
           <div className="filter-row" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
               { key: "all", label: `All Jobs (${stats.total})` },
@@ -356,7 +384,7 @@ export default function JobsPage() {
               { key: "remote", label: `🌐 Remote (${stats.remote})` },
               { key: "external", label: `📎 External (${stats.external})` },
             ].map(f => (
-              <button key={f.key} type="button" onClick={() => setActiveFilter(f.key as any)}
+              <button key={f.key} type="button" onClick={() => handleFilterChange(f.key as any)}
                 style={{ padding: "8px 16px", borderRadius: 999, border: "1.5px solid", borderColor: activeFilter === f.key ? "#2563eb" : "#e2e8f0", background: activeFilter === f.key ? "#eef2ff" : "white", color: activeFilter === f.key ? "#2563eb" : "#475569", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap", transition: "all .15s ease" }}>
                 {f.label}
               </button>
@@ -399,7 +427,6 @@ export default function JobsPage() {
               const desc = cleanDescription(job.description);
               const descPreview = desc.length > 160 ? desc.slice(0, 160) + "…" : desc;
               
-              // ✅ Salary shown as raw numbers (rupees) instead of lakhs
               const salary = job.salary_min || job.salary_max
                 ? `${job.salary_min ? `₹${job.salary_min.toLocaleString("en-IN")}` : "₹—"} – ${job.salary_max ? `₹${job.salary_max.toLocaleString("en-IN")}` : "₹—"}`
                 : null;

@@ -1,33 +1,60 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { awardPoints, POINTS } from "@/lib/points";
+import { trackSignupStart, event as gaEvent } from "@/lib/analytics";
 
 export default function Signup() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("developer");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
+  // Track that user reached signup page
+  useEffect(() => {
+    trackSignupStart(window.location.pathname);
+  }, []);
+
   async function handleSignup() {
     setError("");
     setMessage("");
+
+    // Basic validation
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
 
     localStorage.setItem("selectedRole", role);
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
       return;
     }
@@ -46,7 +73,14 @@ export default function Signup() {
         return;
       }
 
+      // Award signup points
       await awardPoints(data.user.id, "signup", POINTS.SIGNUP);
+
+      // Track successful signup in GA
+      gaEvent("signup_complete", {
+        method: "email",
+        role: role,
+      });
 
       setMessage("Account created! +20 points. Redirecting...");
 
@@ -56,13 +90,15 @@ export default function Signup() {
         } else {
           router.push("/profile/edit");
         }
-      }, 1000);
+      }, 1500);
     }
 
     setLoading(false);
   }
 
   async function handleGoogle() {
+    // Track that user started Google signup
+    gaEvent("signup_start", { method: "google", source_page: window.location.pathname });
     localStorage.setItem("selectedRole", role);
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -85,11 +121,11 @@ export default function Signup() {
     >
       <h2 style={{ textAlign: "center", marginBottom: "20px" }}>Create Account</h2>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {message && <p style={{ color: "green" }}>{message}</p>}
+      {error && <p style={{ color: "#dc2626", fontSize: "14px", marginBottom: "10px" }}>{error}</p>}
+      {message && <p style={{ color: "#16a34a", fontSize: "14px", marginBottom: "10px" }}>{message}</p>}
 
       <div style={{ marginBottom: "15px" }}>
-        <p style={{ marginBottom: "5px" }}>I want to:</p>
+        <p style={{ marginBottom: "5px", fontSize: "14px", fontWeight: 500 }}>I want to:</p>
         <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
@@ -102,7 +138,7 @@ export default function Signup() {
 
       <input
         type="email"
-        placeholder="Email"
+        placeholder="Email address"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         style={input}
@@ -110,14 +146,22 @@ export default function Signup() {
 
       <input
         type="password"
-        placeholder="Password"
+        placeholder="Password (min. 6 characters)"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         style={input}
       />
 
+      <input
+        type="password"
+        placeholder="Confirm password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        style={input}
+      />
+
       <button onClick={handleSignup} disabled={loading} style={btn}>
-        {loading ? "Creating..." : "Sign Up"}
+        {loading ? "Creating account..." : "Sign Up"}
       </button>
 
       <button
@@ -131,7 +175,7 @@ export default function Signup() {
         Continue with Google
       </button>
 
-      <p style={{ marginTop: "15px", textAlign: "center" }}>
+      <p style={{ marginTop: "15px", textAlign: "center", fontSize: "14px" }}>
         Already have an account?{" "}
         <span
           onClick={() => router.push("/login")}
@@ -150,6 +194,7 @@ const input = {
   marginBottom: "12px",
   borderRadius: "8px",
   border: "1px solid #ddd",
+  fontSize: "14px",
 };
 
 const btn = {
@@ -161,4 +206,6 @@ const btn = {
   color: "white",
   fontWeight: "600",
   cursor: "pointer",
+  transition: "opacity 0.2s",
+  fontSize: "14px",
 };

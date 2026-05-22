@@ -1,8 +1,10 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { event as gaEvent } from "@/lib/analytics";
 
 export default function Login() {
   const router = useRouter();
@@ -21,6 +23,9 @@ export default function Login() {
       return;
     }
 
+    // Track login attempt
+    gaEvent("login_attempt", { method: "email" });
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -28,6 +33,8 @@ export default function Login() {
 
     if (error) {
       setError(error.message);
+      // Track failed login
+      gaEvent("login_failed", { method: "email", error: error.message });
       setLoading(false);
       return;
     }
@@ -47,12 +54,17 @@ export default function Login() {
 
     if (profileError) {
       console.error("Error fetching role:", profileError);
+      // Default to developer if role not found
+      gaEvent("login_success", { method: "email", role: "developer" });
       router.push("/profile/edit");
       setLoading(false);
       return;
     }
 
     const role = userData?.role || "developer";
+
+    // Track successful login
+    gaEvent("login_success", { method: "email", role });
 
     if (role === "company") {
       router.push("/company/dashboard");
@@ -64,6 +76,9 @@ export default function Login() {
   }
 
   async function handleGoogleLogin() {
+    // Track Google OAuth start
+    gaEvent("login_attempt", { method: "google" });
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -73,6 +88,7 @@ export default function Login() {
     if (error) {
       console.error("Google login error:", error);
       setError(error.message);
+      gaEvent("login_failed", { method: "google", error: error.message });
     }
   }
 
@@ -120,7 +136,7 @@ export default function Login() {
   );
 }
 
-// STYLES with proper typing
+// STYLES (unchanged)
 const container: React.CSSProperties = {
   display: "flex",
   justifyContent: "center",
