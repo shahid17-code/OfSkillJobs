@@ -1,30 +1,35 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function BlogScripts() {
+  // Store created elements for cleanup
+  const createdElements = useRef<HTMLElement[]>([]);
+  const observers = useRef<{ fadeObs?: IntersectionObserver; tocObs?: IntersectionObserver; statObs?: IntersectionObserver }>({});
+  const eventListeners = useRef<{ scrollProgress?: () => void; scrollBtt?: () => void }>({});
+
   useEffect(() => {
     const timer = setTimeout(() => {
-
       /* ─────────────────────────────────────────────
          1. READING PROGRESS BAR
       ───────────────────────────────────────────── */
       const bar = document.createElement("div");
       bar.id = "blog-progress-bar";
       Object.assign(bar.style, {
-        position:        "fixed",
-        top:             "0",
-        left:            "0",
-        width:           "0%",
-        height:          "3px",
-        background:      "linear-gradient(90deg, #F59E0B 0%, #FCD34D 50%, #F59E0B 100%)",
-        backgroundSize:  "200% 100%",
-        zIndex:          "99999",
-        transition:      "width 0.15s ease-out",
-        boxShadow:       "0 0 8px rgba(245,158,11,0.60), 0 0 2px rgba(245,158,11,0.30)",
-        animation:       "shimmer-bar 2s linear infinite",
+        position: "fixed",
+        top: "0",
+        left: "0",
+        width: "0%",
+        height: "3px",
+        background: "linear-gradient(90deg, #F59E0B 0%, #FCD34D 50%, #F59E0B 100%)",
+        backgroundSize: "200% 100%",
+        zIndex: "99999",
+        transition: "width 0.15s ease-out",
+        boxShadow: "0 0 8px rgba(245,158,11,0.60), 0 0 2px rgba(245,158,11,0.30)",
+        animation: "shimmer-bar 2s linear infinite",
       });
       document.body.appendChild(bar);
+      createdElements.current.push(bar);
 
       // shimmer keyframe
       if (!document.getElementById("blog-scripts-keyframes")) {
@@ -101,6 +106,7 @@ export default function BlogScripts() {
           .hero-stat-animated:nth-child(4) { animation-delay: 1.2s; }
         `;
         document.head.appendChild(kf);
+        createdElements.current.push(kf);
       }
 
       const updateProgress = () => {
@@ -110,6 +116,7 @@ export default function BlogScripts() {
         bar.style.width = pct + "%";
       };
       window.addEventListener("scroll", updateProgress, { passive: true });
+      eventListeners.current.scrollProgress = updateProgress;
       updateProgress();
 
       /* ─────────────────────────────────────────────
@@ -136,10 +143,10 @@ export default function BlogScripts() {
         { threshold: 0.07, rootMargin: "0px 0px -40px 0px" }
       );
       fadeTargets.forEach((el) => fadeObs.observe(el));
+      observers.current.fadeObs = fadeObs;
 
       /* ─────────────────────────────────────────────
-         3. DYNAMIC TOC GENERATION — FIXED ✅
-         Now uses sections with IDs instead of h2.
+         3. DYNAMIC TOC GENERATION
       ───────────────────────────────────────────── */
       const tocContainer = document.getElementById("dynamic-toc");
       if (tocContainer) {
@@ -163,15 +170,13 @@ export default function BlogScripts() {
           });
           tocContainer.appendChild(a);
         });
-        // If no sections found, show a fallback message
         if (sections.length === 0) {
           tocContainer.innerHTML = '<span style="color:#94a3b8; font-size:13px;">No headings found</span>';
         }
       }
 
       /* ─────────────────────────────────────────────
-         4. ACTIVE TOC HIGHLIGHTING — FIXED ✅
-         Now observes sections, not h2.
+         4. ACTIVE TOC HIGHLIGHTING
       ───────────────────────────────────────────── */
       const articleSections = document.querySelectorAll("#blogArticle .post-section[id]");
       const tocObs = new IntersectionObserver(
@@ -191,6 +196,7 @@ export default function BlogScripts() {
         { rootMargin: "-20% 0px -65% 0px" }
       );
       articleSections.forEach((section) => tocObs.observe(section));
+      observers.current.tocObs = tocObs;
 
       /* ─────────────────────────────────────────────
          5. HERO STAT COUNTER ANIMATION
@@ -209,6 +215,7 @@ export default function BlogScripts() {
         { threshold: 0.5 }
       );
       statNums.forEach((el) => statObs.observe(el));
+      observers.current.statObs = statObs;
 
       /* ─────────────────────────────────────────────
          6. BACK TO TOP BUTTON
@@ -218,36 +225,36 @@ export default function BlogScripts() {
       btt.setAttribute("aria-label", "Back to top");
       btt.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 13V5M9 5L5 9M9 5l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
       Object.assign(btt.style, {
-        position:     "fixed",
-        bottom:       "28px",
-        right:        "24px",
-        zIndex:       "9998",
-        width:        "44px",
-        height:       "44px",
+        position: "fixed",
+        bottom: "28px",
+        right: "24px",
+        zIndex: "9998",
+        width: "44px",
+        height: "44px",
         borderRadius: "50%",
-        background:   "#0F1923",
-        color:        "#F59E0B",
-        border:       "1px solid rgba(245,158,11,0.25)",
-        cursor:       "pointer",
-        display:      "flex",
-        alignItems:   "center",
-        justifyContent:"center",
-        boxShadow:    "0 4px 20px rgba(0,0,0,0.18)",
-        transform:    "translateY(8px)",
+        background: "#0F1923",
+        color: "#F59E0B",
+        border: "1px solid rgba(245,158,11,0.25)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+        transform: "translateY(8px)",
       });
       btt.addEventListener("click", () =>
         window.scrollTo({ top: 0, behavior: "smooth" })
       );
       document.body.appendChild(btt);
+      createdElements.current.push(btt);
 
-      window.addEventListener(
-        "scroll",
-        () => {
-          if (window.scrollY > 400) btt.classList.add("visible");
-          else btt.classList.remove("visible");
-        },
-        { passive: true }
-      );
+      const toggleBackToTop = () => {
+        if (window.scrollY > 400) btt.classList.add("visible");
+        else btt.classList.remove("visible");
+      };
+      window.addEventListener("scroll", toggleBackToTop, { passive: true });
+      eventListeners.current.scrollBtt = toggleBackToTop;
+      toggleBackToTop();
 
       /* ─────────────────────────────────────────────
          7. SHARE BUTTON ACTIONS
@@ -305,22 +312,29 @@ export default function BlogScripts() {
         const mins = Math.max(1, Math.ceil(wordCount / 220));
         readTimeEl.textContent = `${mins} min read`;
       }
-
-      /* ─────────────────────────────────────────────
-         CLEANUP
-      ───────────────────────────────────────────── */
-      return () => {
-        window.removeEventListener("scroll", updateProgress);
-        fadeObs.disconnect();
-        tocObs.disconnect();
-        statObs.disconnect();
-        if (bar.parentNode) bar.parentNode.removeChild(bar);
-        if (btt.parentNode) btt.parentNode.removeChild(btt);
-      };
-
     }, 120);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Remove scroll event listeners
+      if (eventListeners.current.scrollProgress) {
+        window.removeEventListener("scroll", eventListeners.current.scrollProgress);
+      }
+      if (eventListeners.current.scrollBtt) {
+        window.removeEventListener("scroll", eventListeners.current.scrollBtt);
+      }
+      // Disconnect observers
+      if (observers.current.fadeObs) observers.current.fadeObs.disconnect();
+      if (observers.current.tocObs) observers.current.tocObs.disconnect();
+      if (observers.current.statObs) observers.current.statObs.disconnect();
+      // Remove DOM elements
+      createdElements.current.forEach((el) => {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      });
+      createdElements.current = [];
+      observers.current = {};
+      eventListeners.current = {};
+    };
   }, []);
 
   return null;

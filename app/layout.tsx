@@ -9,6 +9,14 @@ export const metadata = {
   icons: {
     icon: "/favicon.png",
   },
+  // ✅ Add hreflang for India targeting
+  alternates: {
+    canonical: "https://ofskilljobs.vercel.app",
+    languages: {
+      "en-in": "/",      // English (India)
+      "en": "/",         // English (general – fallback)
+    },
+  },
 };
 
 export const viewport = {
@@ -73,7 +81,7 @@ export default function RootLayout({
             <Link href="/contact" style={footerLinkStyle}>Contact</Link>
             <Link href="/privacy" style={footerLinkStyle}>Privacy</Link>
             <Link href="/terms" style={footerLinkStyle}>Terms</Link>
-            <Link href="/blog" style={footerLinkStyle}>Blog</Link> {/* ✅ NEW */}
+            <Link href="/blog" style={footerLinkStyle}>Blog</Link>
           </div>
           <div
             style={{
