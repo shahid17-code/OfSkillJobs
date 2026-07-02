@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { getTierFromPoints, getTierColor } from "@/lib/tiers";
 
 type ToastType = "success" | "error" | "info";
 
-// ---------- Helpers ----------
 function safeParseArray<T = any>(value: unknown): T[] {
   if (Array.isArray(value)) return value;
   if (typeof value === "string") {
@@ -49,8 +50,12 @@ export default function ProfilePage() {
 function ProfileInner() {
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [skillCapsules, setSkillCapsules] = useState<any[]>([]);
+  const [legacyProjects, setLegacyProjects] = useState<any[]>([]);
   const [badges, setBadges] = useState<any[]>([]);
+  const [signalCountTotal, setSignalCountTotal] = useState(0);
+  const [spotlightCount, setSpotlightCount] = useState(0);
+  const [averageCraftRank, setAverageCraftRank] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -63,46 +68,32 @@ function ProfileInner() {
   });
   const [aiLoading, setAiLoading] = useState(false);
 
-  // -------- Badge syncing (no duplicate errors) --------
   async function syncUserBadges(userId: string, currentPoints: number) {
     try {
       const { data: allBadges, error: badgesError } = await supabase
         .from("badges")
         .select("*")
         .order("min_points", { ascending: true });
-
-      if (badgesError) {
-        console.error("Error fetching badges:", badgesError);
-        return;
-      }
-      if (!allBadges || allBadges.length === 0) return;
-
-      const { data: owned, error: ownedError } = await supabase
+      if (badgesError || !allBadges) return;
+      const { data: owned } = await supabase
         .from("user_badges")
         .select("badge_id")
         .eq("user_id", userId);
-
-      if (ownedError) return;
-
       const ownedSet = new Set(owned?.map((b: any) => b.badge_id) || []);
       const toAward = allBadges.filter(
         (badge: any) => currentPoints >= badge.min_points && !ownedSet.has(badge.id)
       );
-
       if (toAward.length === 0) return;
-
       const inserts = toAward.map((badge: any) => ({
         user_id: userId,
         badge_id: badge.id,
       }));
-
-      await supabase.from("user_badges").upsert(inserts, { onConflict: 'user_id, badge_id' });
+      await supabase.from("user_badges").upsert(inserts, { onConflict: "user_id, badge_id" });
     } catch (err) {
       console.error("Badge sync error:", err);
     }
   }
 
-  // -------- Load profile data --------
   useEffect(() => {
     loadData();
     document.documentElement.style.background = dark ? "#0b1220" : "#f8fafc";
@@ -126,9 +117,7 @@ function ProfileInner() {
         .select("*")
         .eq("id", user.id)
         .single();
-
       if (profileError) throw profileError;
-
       if (profileData) {
         profileData.skills = safeParseArray(profileData.skills);
         profileData.experience = safeParseArray(profileData.experience);
@@ -136,15 +125,42 @@ function ProfileInner() {
         profileData.languages = safeParseArray(profileData.languages);
       }
 
-      const { data: submissionsData } = await supabase
+      const { data: capsules, error: capsuleError } = await supabase
+        .from("skill_capsules")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (!capsuleError) setSkillCapsules(capsules || []);
+
+      const { data: submissions } = await supabase
         .from("submissions")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
+      setLegacyProjects(submissions || []);
+
+      if (capsules && capsules.length) {
+        let totalSignals = 0;
+        let totalImpact = 0;
+        capsules.forEach((cap: any) => {
+          const signals = (cap.signal_counts || {}) as Record<string, number>;
+          totalSignals += Object.values(signals).reduce((a: number, b: number) => a + b, 0);
+          totalImpact += cap.skill_impact_score || 0;
+        });
+        setSignalCountTotal(totalSignals);
+        setAverageCraftRank(totalImpact / capsules.length);
+      } else {
+        setSignalCountTotal(0);
+        setAverageCraftRank(0);
+      }
+
+      const { count: spotlightCount } = await supabase
+        .from("recruiter_spotlights")
+        .select("*", { count: "exact", head: true })
+        .eq("candidate_id", user.id);
+      setSpotlightCount(spotlightCount || 0);
 
       setProfile(profileData);
-      setProjects(submissionsData || []);
-
       await syncUserBadges(user.id, profileData?.total_points || 0);
       await loadBadges(user.id);
     } catch (err) {
@@ -160,14 +176,12 @@ function ProfileInner() {
       .from("user_badges")
       .select("badge:badges(*)")
       .eq("user_id", userId);
-
     if (!error && data) {
       const earned = data.map((item: any) => item.badge).filter(Boolean);
       setBadges(earned);
     }
   }
 
-  // -------- UI helpers --------
   function showToast(message: string, type: ToastType = "info", duration = 3000) {
     setToast({ message, type });
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
@@ -225,13 +239,12 @@ function ProfileInner() {
     if (skills.includes("react")) badgesList.push("⚛️ React");
     if (skills.includes("node") || skills.includes("node.js")) badgesList.push("🟩 Node.js");
     if (skills.includes("python")) badgesList.push("🐍 Python");
-    if (projects.length >= 3) badgesList.push("🚀 Builder");
-    if (projects.length >= 5) badgesList.push("🏆 Creator");
+    if (skillCapsules.length >= 3) badgesList.push("🚀 Builder");
+    if (skillCapsules.length >= 5) badgesList.push("🏆 Creator");
     if (profile.intro_video_url) badgesList.push("🎥 Video Intro");
     return badgesList;
   }
 
-  // -------- Share profile --------
   async function shareProfile() {
     if (!profile?.username) {
       showToast("Set a username in Edit Profile to share", "error");
@@ -247,7 +260,6 @@ function ProfileInner() {
         });
         showToast("Shared", "success");
       } catch (err) {
-        console.error("native share error:", err);
         fallbackCopy(url);
       }
     } else {
@@ -263,7 +275,6 @@ function ProfileInner() {
     );
   }
 
-  // -------- PDF with watermark (print) --------
   function downloadPdf() {
     if (!previewRef.current) {
       showToast("Nothing to download", "error");
@@ -294,7 +305,6 @@ function ProfileInner() {
         th { text-align: left; background: #f8fafc; padding: 10px; font-size: 11px; color: #94a3b8; }
         td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #64748b; }
         .td-bold { font-weight: 700; color: #0f172a; width: 30%; }
-        /* Watermark */
         .watermark {
           position: fixed;
           bottom: 10px;
@@ -308,16 +318,8 @@ function ProfileInner() {
           margin-top: 20px;
           background: white;
         }
-        .watermark img {
-          width: 14px;
-          height: 14px;
-          vertical-align: middle;
-          margin-right: 4px;
-        }
-        @media print {
-          .watermark { position: fixed; bottom: 0; }
-          body { padding-bottom: 30px; }
-        }
+        .watermark img { width: 14px; height: 14px; vertical-align: middle; margin-right: 4px; }
+        @media print { .watermark { position: fixed; bottom: 0; } body { padding-bottom: 30px; } }
       </style>
     `;
     const w = window.open("", "_blank", "width=1000,height=900");
@@ -358,7 +360,6 @@ function ProfileInner() {
     }
   }
 
-  // -------- AI generation --------
   async function generateWithAI(kind: "bio" | "headline") {
     setAiLoading(true);
     try {
@@ -427,7 +428,6 @@ function ProfileInner() {
     }
   }
 
-  // -------- Loading / Error states --------
   if (loading) {
     return <div style={{ padding: 60, textAlign: "center" }}>Loading profile…</div>;
   }
@@ -443,7 +443,9 @@ function ProfileInner() {
     );
   }
 
-  // -------- Style objects (light / dark aware) --------
+  const userTier = getTierFromPoints(profile.total_points || 0);
+  const tierColor = getTierColor(userTier);
+
   const containerStyle = {
     maxWidth: 1120,
     margin: "0 auto",
@@ -480,7 +482,6 @@ function ProfileInner() {
     margin: 0,
   };
 
-  // -------- JSX --------
   return (
     <div style={containerStyle}>
       <div style={{ marginBottom: 18 }}>
@@ -536,20 +537,24 @@ function ProfileInner() {
             <p style={styles.subText}>{profile.bio || "No summary provided."}</p>
             <div style={styles.heroButtons}>
               <button onClick={shareProfile} style={styles.ghostBtn}>📤 Share</button>
+              <Link href="/launch-skillcapsule" style={{ ...styles.ghostBtn, textDecoration: "none" }}>🚀 Launch SkillCapsule</Link>
+              <Link href="/the-stage" style={{ ...styles.ghostBtn, textDecoration: "none" }}>🎪 The Showfloor</Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stats grid */}
       <div style={styles.statsGrid} className="profile-stats-grid">
-        <div style={statCard(dark)}><div style={styles.statValue}>{profile.views || 0}</div><div style={styles.statLabel}>Profile Views</div></div>
-        <div style={statCard(dark)}><div style={styles.statValue}>{profile.profile_clicks || 0}</div><div style={styles.statLabel}>Profile Shares</div></div>
-        <div style={statCard(dark)}><div style={styles.statValue}>{profile.downloads || 0}</div><div style={styles.statLabel}>PDF Downloads</div></div>
-        <div style={statCard(dark)}><div style={styles.statValue}>{projects.length}</div><div style={styles.statLabel}>Projects</div></div>
+        <div style={statCard(dark)}>
+          {/* ✅ FIXED: merged duplicate style attributes */}
+          <div style={{ ...styles.statValue, color: tierColor }}>{userTier}</div>
+          <div style={styles.statLabel}>Trust Tier</div>
+        </div>
+        <div style={statCard(dark)}><div style={styles.statValue}>{signalCountTotal}</div><div style={styles.statLabel}>SkillSignals Received</div></div>
+        <div style={statCard(dark)}><div style={styles.statValue}>{spotlightCount}</div><div style={styles.statLabel}>Recruiter Spotlights</div></div>
+        <div style={statCard(dark)}><div style={styles.statValue}>{averageCraftRank.toFixed(0)}</div><div style={styles.statLabel}>Avg. CraftRank</div></div>
       </div>
 
-      {/* Profile strength & badges */}
       <div style={{ ...cardStyle, marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div style={{ flex: 1 }}>
@@ -585,11 +590,14 @@ function ProfileInner() {
 
         <div style={{ marginTop: 20, borderTop: `1px solid ${dark ? "#1e293b" : "#eef2f7"}`, paddingTop: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div><div style={{ fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569" }}>🏆 Total Points</div><div style={{ fontSize: 28, fontWeight: 800, color: dark ? "#fff" : "#0f172a" }}>{profile.total_points || 0}</div></div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569" }}>🏆 Trust Tier</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: tierColor }}>{userTier}</div>
+            </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>🏅 Badges Earned</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>🏅 Talent Insignias</div>
               <div className="badges-container" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 12 }}>
-                {badges.length === 0 && <span style={mutedText}>No badges yet – keep using the platform!</span>}
+                {badges.length === 0 && <span style={mutedText}>No insignias yet – keep using the platform!</span>}
                 {badges.map((badge) => (
                   <div key={badge.id} style={{ textAlign: "center", width: "100%" }}>
                     <div style={{ fontSize: 32 }}>{badge.icon || "🏅"}</div>
@@ -606,10 +614,10 @@ function ProfileInner() {
         </div>
       </div>
 
-      {/* Two column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 0.9fr", gap: 18, alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={cardStyle}><h2 style={sectionTitle}>About</h2><p style={bodyText}>{profile.bio || "No summary provided."}</p></div>
+
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Experience</h2>
             {!profile.experience?.length ? <p style={mutedText}>No experiences added</p> : profile.experience.map((e: any, idx: number) => (
@@ -620,6 +628,7 @@ function ProfileInner() {
               </div>
             ))}
           </div>
+
           <div style={cardStyle}>
             <h2 style={sectionTitle}>Education</h2>
             {!profile.education?.length ? <p style={mutedText}>No education listed</p> : profile.education.map((ed: any, idx: number) => (
@@ -630,19 +639,51 @@ function ProfileInner() {
               </div>
             ))}
           </div>
+
           <div style={cardStyle}>
-            <h2 style={sectionTitle}>Projects ({projects.length})</h2>
-            {!projects.length ? <p style={mutedText}>No projects submitted</p> : projects.map(p => (
-              <div key={p.id} style={{ marginBottom: 16, borderTop: "1px solid rgba(148,163,184,0.18)", paddingTop: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}><strong>{p.title}</strong><span style={{ fontSize: 13, color: dark ? "#9fb0c9" : "#64748b" }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : ""}</span></div>
-                <div style={{ marginTop: 6, color: dark ? "#cbd5e1" : "#475569" }}>{p.description}</div>
-                <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-                  {p.repo_url && <a href={normalizeUrl(p.repo_url)} target="_blank" style={styles.linkBadge}>Code</a>}
-                  {p.file_url && <a href={normalizeUrl(p.file_url)} target="_blank" style={styles.linkBadge}>Live</a>}
-                </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h2 style={sectionTitle}>SkillVault ({skillCapsules.length})</h2>
+              <Link href="/launch-skillcapsule" style={{ fontSize: 13, fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>+ Launch new</Link>
+            </div>
+            {skillCapsules.length === 0 ? (
+              <p style={mutedText}>No SkillCapsules yet. <Link href="/launch-skillcapsule" style={{ color: "#2563eb" }}>Launch your first →</Link></p>
+            ) : (
+              <div style={{ display: "grid", gap: 16 }}>
+                {skillCapsules.map((cap) => (
+                  <div key={cap.id} style={{ borderBottom: `1px solid ${dark ? "#1e293b" : "#eef2f7"}`, paddingBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" }}>
+                      <div><strong style={{ fontSize: 16 }}>{cap.title}</strong> <span style={{ fontSize: 12, background: dark ? "#1e293b" : "#f1f5f9", padding: "2px 6px", borderRadius: 12, marginLeft: 8 }}>{cap.category}</span></div>
+                      <span style={{ fontSize: 13, color: "#f59e0b", fontWeight: 700 }}>CraftRank: {cap.skill_impact_score || 0}</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: dark ? "#cbd5e1" : "#475569", marginTop: 6 }}>{cap.description}</p>
+                    <div style={{ display: "flex", gap: 12, marginTop: 8, fontSize: 12, color: dark ? "#9fb0c9" : "#64748b" }}>
+                      <span>📊 {Object.values((cap.signal_counts || {}) as Record<string, number>).reduce((a: number, b: number) => a + b, 0)} SkillSignals</span>
+                      <span>👁️ {cap.recruiter_spots || 0} spots</span>
+                    </div>
+                    {cap.link_url && (
+                      <a href={cap.link_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#3b82f6", textDecoration: "none" }}>View Work →</a>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
+
+          {legacyProjects.length > 0 && (
+            <div style={cardStyle}>
+              <h2 style={sectionTitle}>Legacy Projects ({legacyProjects.length})</h2>
+              {legacyProjects.map(p => (
+                <div key={p.id} style={{ marginBottom: 12, borderBottom: "1px solid rgba(148,163,184,0.18)", paddingBottom: 8 }}>
+                  <div><strong>{p.title}</strong> <span style={{ fontSize: 12 }}>({p.created_at ? new Date(p.created_at).toLocaleDateString() : ""})</span></div>
+                  <p style={{ fontSize: 13 }}>{p.description}</p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {p.repo_url && <a href={normalizeUrl(p.repo_url)} target="_blank" style={styles.linkBadge}>Code</a>}
+                    {p.file_url && <a href={normalizeUrl(p.file_url)} target="_blank" style={styles.linkBadge}>Live</a>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <aside style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -679,12 +720,12 @@ function ProfileInner() {
               <button onClick={downloadPdf} style={styles.actionBtn}>Print CV</button>
               <button onClick={exportJSON} style={styles.actionBtn}>Export JSON</button>
               <button onClick={() => router.push(`/applications/${profile.id}`)} style={styles.actionBtn}>Track Applications</button>
+              <Link href="/the-stage" style={{ ...styles.actionBtn, textDecoration: "none", display: "block", textAlign: "center" }}>View The Showfloor</Link>
             </div>
           </div>
         </aside>
       </div>
 
-      {/* Hidden PDF preview */}
       <div style={{ display: "none" }}>
         <div ref={previewRef}>
           <div className="cv-wrapper">
@@ -724,7 +765,19 @@ function ProfileInner() {
                 </div>
               ))}
               <div className="section-title">Projects</div>
-              <table><thead><tr><th>Project</th><th>Description</th></tr></thead><tbody>{projects.map(p => (<tr key={p.id}><td className="td-bold">{p.title}</td><td>{p.description}</td></tr>))}</tbody></table>
+              <table>
+                <thead>
+                  <tr><th>Project</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                  {legacyProjects.map(p => (
+                    <tr key={p.id}>
+                      <td className="td-bold">{p.title}</td>
+                      <td>{p.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -745,7 +798,6 @@ function ProfileInner() {
   );
 }
 
-// ---------- Styles (unchanged from original) ----------
 const styles = {
   heroBanner: { borderRadius: 20, overflow: "hidden" as const, minHeight: 340, backgroundSize: "cover", backgroundPosition: "center", boxShadow: "0 18px 45px rgba(2,6,23,0.12)", padding: 22, display: "flex", flexDirection: "column" as const, justifyContent: "space-between" },
   heroTopRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },

@@ -28,6 +28,7 @@ type Job = {
   created_at: string | null;
   external_apply_url: string | null;
   company_name?: string | null;
+  forge_id?: string | null;
 };
 
 type Company = {
@@ -72,15 +73,9 @@ function trackApplyEvent(jobId: string, jobTitle: string, applyMethod: string) {
   }
 }
 
-// Convert plain text with newlines to HTML paragraphs
 function formatDescription(text: string): string {
   if (!text) return "";
-  // Check if text already contains HTML tags
-  if (/<[^>]*>/.test(text)) {
-    // If HTML exists, return as is (but sanitize if needed – trusted content)
-    return text;
-  }
-  // Otherwise, convert newlines to <br> and wrap paragraphs
+  if (/<[^>]*>/.test(text)) return text;
   const paragraphs = text.split(/\n\s*\n/);
   if (paragraphs.length > 1) {
     return paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
@@ -112,6 +107,10 @@ export default function JobDetailClient({
   const [bioExpanded, setBioExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+
+  // ✅ New state for SkillCapsules
+  const [userCapsules, setUserCapsules] = useState<any[]>([]);
+  const [selectedCapsuleIds, setSelectedCapsuleIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (job) {
@@ -174,6 +173,23 @@ export default function JobDetailClient({
     }
   }, [authUser]);
 
+  // ✅ Fetch user's SkillCapsules
+  useEffect(() => {
+    async function fetchCapsules() {
+      if (authUser?.id) {
+        const { data } = await supabase
+          .from("skill_capsules")
+          .select("id, title, skill_impact_score")
+          .eq("user_id", authUser.id)
+          .order("created_at", { ascending: false });
+        setUserCapsules(data || []);
+      } else {
+        setUserCapsules([]);
+      }
+    }
+    fetchCapsules();
+  }, [authUser]);
+
   function showToast(message: string, type: ToastType = "info", duration = 2800) {
     setToast({ message, type });
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -202,6 +218,19 @@ export default function JobDetailClient({
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  // ✅ Toggle capsule selection (max 3)
+  function toggleCapsule(capsuleId: string) {
+    if (selectedCapsuleIds.includes(capsuleId)) {
+      setSelectedCapsuleIds(prev => prev.filter(id => id !== capsuleId));
+    } else {
+      if (selectedCapsuleIds.length < 3) {
+        setSelectedCapsuleIds(prev => [...prev, capsuleId]);
+      } else {
+        showToast("You can select up to 3 SkillCapsules", "info");
+      }
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -238,9 +267,18 @@ export default function JobDetailClient({
         applicantId = userData.id;
       }
 
+      // ✅ Insert with capsule_ids
       const { error } = await supabase.from("job_applications").insert({
-        job_id: job.id, applicant_id: applicantId, applicant_name, applicant_email: normalizedEmail,
-        applicant_phone: applicant_phone || null, resume_link, drive_link, note: note || null, status: "submitted",
+        job_id: job.id,
+        applicant_id: applicantId,
+        applicant_name,
+        applicant_email: normalizedEmail,
+        applicant_phone: applicant_phone || null,
+        resume_link,
+        drive_link,
+        note: note || null,
+        status: "submitted",
+        capsule_ids: selectedCapsuleIds,
       });
       if (error) throw error;
 
@@ -248,6 +286,7 @@ export default function JobDetailClient({
       showToast("Application submitted! +10 points", "success");
       setAlreadyApplied(true);
       setForm(initialForm);
+      setSelectedCapsuleIds([]);
       setTimeout(() => router.push("/jobs"), 1100);
     } catch (err) { console.error(err); showToast("Submission failed", "error"); }
     finally { setSubmitting(false); }
@@ -284,8 +323,6 @@ export default function JobDetailClient({
   }
 
   const displayCompanyName = company?.company_name || job.company_name || "External Employer";
-
-  // Format description with proper line breaks
   const formattedDescription = formatDescription(job.description);
 
   return (
@@ -358,9 +395,7 @@ export default function JobDetailClient({
           gap: 18,
           alignItems: "start",
         }}>
-          {/* LEFT COLUMN */}
           <section style={mainColumn}>
-            {/* About this role – with proper line breaks */}
             <div style={premiumCard}>
               <SectionHeader title="About this role" subtitle="A clear view of what the company needs" />
               <div
@@ -391,7 +426,6 @@ export default function JobDetailClient({
               </div>
             )}
 
-            {/* Company snapshot – removed the "Original Job Posting" link */}
             <div style={premiumCard}>
               <SectionHeader title="Company snapshot" subtitle="A quick look at who you are applying to" />
               <div style={companyCard}>
@@ -437,7 +471,6 @@ export default function JobDetailClient({
             </div>
           </section>
 
-          {/* RIGHT COLUMN – Apply card (sticky) */}
           <aside style={sideColumn}>
             <div style={{
               display: "grid",
@@ -487,6 +520,29 @@ export default function JobDetailClient({
                     <Field label="Phone"><input name="applicant_phone" value={form.applicant_phone} onChange={handleChange} placeholder="Phone number" style={input} disabled={alreadyApplied} /></Field>
                     <Field label="Resume link *"><input name="resume_link" value={form.resume_link} onChange={handleChange} placeholder="Resume / portfolio link" style={input} disabled={alreadyApplied} /></Field>
                     <Field label="Google Drive link *"><input name="drive_link" value={form.drive_link} onChange={handleChange} placeholder="Drive folder link" style={input} disabled={alreadyApplied} /></Field>
+
+                    {/* ✅ NEW: SkillCapsule selector */}
+                    {userCapsules.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <p style={{ fontWeight: 700, marginBottom: 8 }}>📦 Show your SkillCapsules (optional, up to 3)</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                          {userCapsules.map(cap => (
+                            <label key={cap.id} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedCapsuleIds.includes(cap.id)}
+                                onChange={() => toggleCapsule(cap.id)}
+                                disabled={alreadyApplied}
+                              />
+                              <span>{cap.title}</span>
+                              {cap.skill_impact_score > 0 && <span style={{ fontSize: 11, color: "#f59e0b" }}>(CraftRank: {cap.skill_impact_score})</span>}
+                            </label>
+                          ))}
+                        </div>
+                        <p style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>Select up to 3 capsules to showcase your work. Companies will see them in your application.</p>
+                      </div>
+                    )}
+
                     <Field label="Note"><textarea name="note" value={form.note} onChange={handleChange} placeholder="Short note" style={textarea} disabled={alreadyApplied} /></Field>
                     <button type="submit" style={submitBtn} disabled={submitting || expired || alreadyApplied}>
                       {submitting ? "Submitting..." : alreadyApplied ? "Already Applied" : expired ? "Job Closed" : "Submit Application"}
@@ -509,6 +565,7 @@ export default function JobDetailClient({
                   <li>2.Keep your note short and specific.</li>
                   <li>3.Make sure the links open without permission issues.</li>
                   <li>4.Submit the exact task the company asked for.</li>
+                  <li>5.Selecting SkillCapsules shows proof of past work – increases your CraftRank.</li>
                 </ul>
               </div>
             </div>
@@ -585,7 +642,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// ---------- Style constants (unchanged) ----------
+// ---------- Style constants (all unchanged, only added pill style) ----------
 const pageShell: CSSProperties = {
   maxWidth: 1240,
   margin: "0 auto",

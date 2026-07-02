@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { getTierFromPoints, getTierColor } from "@/lib/tiers";
 
 type ToastType = "success" | "error" | "info";
 type ViewTab = "overview" | "jobs" | "applications";
@@ -51,6 +52,7 @@ type JobApplication = {
   drive_opened_at?: string | null;
   resume_opened_at?: string | null;
   profile_viewed_at?: string | null;
+  capsule_ids?: string[] | null;
 };
 
 type ApplicationItem = JobApplication & {
@@ -59,6 +61,7 @@ type ApplicationItem = JobApplication & {
   job_status: string | null;
   job_expires_at: string | null;
   job_deleted?: boolean;
+  capsules?: { id: string; title: string; link_url?: string | null }[];
 };
 
 type ApplicantProfile = {
@@ -74,6 +77,7 @@ type ApplicantProfile = {
   profession?: string | null;
   languages?: string[] | null;
   intro_video_url?: string | null;
+  total_points?: number;
 };
 
 function isExpired(expiresAt: string | null, status: string | null) {
@@ -167,9 +171,34 @@ function CompanyDashboardInner() {
       if (appError) { showToast("Failed to load applications", "error"); setApplications([]); setApplicantProfiles({}); return; }
 
       const items = (appRows || []) as JobApplication[];
+      
+      const allCapsuleIds = items.flatMap(app => app.capsule_ids || []);
+      let capsulesMap: Record<string, { id: string; title: string; link_url?: string | null }> = {};
+      if (allCapsuleIds.length) {
+        const { data: capsules } = await supabase
+          .from("skill_capsules")
+          .select("id, title, link_url")
+          .in("id", allCapsuleIds);
+        if (capsules) {
+          capsulesMap = capsules.reduce((acc, cap) => {
+            acc[cap.id] = cap;
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
+
       const mapped: ApplicationItem[] = items.map((app) => {
         const matchedJob = (jobRows as Job[]).find((job) => job.id === app.job_id);
-        return { ...app, job_title: matchedJob?.title || "Deleted job", job_slug: matchedJob?.slug || "", job_status: matchedJob?.status || null, job_expires_at: matchedJob?.expires_at || null, job_deleted: !!matchedJob?.deleted_at };
+        const capsuleList = (app.capsule_ids || []).map(id => capsulesMap[id]).filter(Boolean);
+        return { 
+          ...app, 
+          job_title: matchedJob?.title || "Deleted job", 
+          job_slug: matchedJob?.slug || "", 
+          job_status: matchedJob?.status || null, 
+          job_expires_at: matchedJob?.expires_at || null, 
+          job_deleted: !!matchedJob?.deleted_at,
+          capsules: capsuleList,
+        };
       });
       setApplications(mapped);
 
@@ -177,9 +206,24 @@ function CompanyDashboardInner() {
       const ids = Array.from(new Set(items.map(a => a.applicant_id?.trim()).filter((v): v is string => Boolean(v))));
       if (ids.length) {
         const { data: usersById } = await supabase.from("users")
-          .select("id, email, username, full_name, name, headline, location, role, avatar_url, profession, languages, intro_video_url").in("id", ids);
+          .select("id, email, username, full_name, name, headline, location, role, avatar_url, profession, languages, intro_video_url, total_points")
+          .in("id", ids);
         (usersById || []).forEach((u: any) => {
-          const p: ApplicantProfile = { id: String(u.id || ""), email: u.email || null, username: u.username || null, full_name: u.full_name || null, name: u.name || null, headline: u.headline || null, location: u.location || null, role: u.role || null, avatar_url: u.avatar_url || null, profession: u.profession || null, languages: Array.isArray(u.languages) ? u.languages : (u.languages ? [u.languages] : []), intro_video_url: u.intro_video_url || null };
+          const p: ApplicantProfile = { 
+            id: String(u.id || ""), 
+            email: u.email || null, 
+            username: u.username || null, 
+            full_name: u.full_name || null, 
+            name: u.name || null, 
+            headline: u.headline || null, 
+            location: u.location || null, 
+            role: u.role || null, 
+            avatar_url: u.avatar_url || null, 
+            profession: u.profession || null, 
+            languages: Array.isArray(u.languages) ? u.languages : (u.languages ? [u.languages] : []), 
+            intro_video_url: u.intro_video_url || null,
+            total_points: u.total_points || 0,
+          };
           if (p.id) profileMap[p.id] = p;
           if (p.email) profileMap[p.email.toLowerCase()] = p;
         });
@@ -187,9 +231,24 @@ function CompanyDashboardInner() {
       const missingEmails = Array.from(new Set(items.map(a => a.applicant_email.trim().toLowerCase()).filter(e => e && !profileMap[e])));
       if (missingEmails.length) {
         const { data: usersByEmail } = await supabase.from("users")
-          .select("id, email, username, full_name, name, headline, location, role, avatar_url, profession, languages, intro_video_url").in("email", missingEmails);
+          .select("id, email, username, full_name, name, headline, location, role, avatar_url, profession, languages, intro_video_url, total_points")
+          .in("email", missingEmails);
         (usersByEmail || []).forEach((u: any) => {
-          const p: ApplicantProfile = { id: String(u.id || ""), email: u.email || null, username: u.username || null, full_name: u.full_name || null, name: u.name || null, headline: u.headline || null, location: u.location || null, role: u.role || null, avatar_url: u.avatar_url || null, profession: u.profession || null, languages: Array.isArray(u.languages) ? u.languages : (u.languages ? [u.languages] : []), intro_video_url: u.intro_video_url || null };
+          const p: ApplicantProfile = { 
+            id: String(u.id || ""), 
+            email: u.email || null, 
+            username: u.username || null, 
+            full_name: u.full_name || null, 
+            name: u.name || null, 
+            headline: u.headline || null, 
+            location: u.location || null, 
+            role: u.role || null, 
+            avatar_url: u.avatar_url || null, 
+            profession: u.profession || null, 
+            languages: Array.isArray(u.languages) ? u.languages : (u.languages ? [u.languages] : []), 
+            intro_video_url: u.intro_video_url || null,
+            total_points: u.total_points || 0,
+          };
           if (p.id) profileMap[p.id] = p;
           if (p.email) profileMap[p.email.toLowerCase()] = p;
         });
@@ -199,7 +258,6 @@ function CompanyDashboardInner() {
     finally { setLoading(false); }
   }
 
-  // ✅ FIX 2: Hard delete — works regardless of whether deleted_at column exists
   async function deleteJob(jobId: string) {
     if (!window.confirm("Delete this job permanently? This cannot be undone.")) return;
     try {
@@ -209,7 +267,6 @@ function CompanyDashboardInner() {
         showToast("Failed to delete job — " + (error.message || "unknown error"), "error");
         return;
       }
-      // Update local state immediately — no reload needed
       setAllJobsRaw(prev => prev.filter(j => j.id !== jobId));
       setApplications(prev => prev.filter(a => a.job_id !== jobId));
       showToast("Job deleted successfully", "success");
@@ -375,14 +432,33 @@ function CompanyDashboardInner() {
     );
   }
 
-  // ── Application card ───────────────────────────────────────────────
+  // ── Application card ──────────────────────────────────
   function renderApplicationCard(app: ApplicationItem) {
     const profile = getApplicantProfile(app);
+    const tier = profile?.total_points !== undefined ? getTierFromPoints(profile.total_points) : null;
+    // ✅ FIX: fallback color if tierColor is null
+    const tierColor = tier ? getTierColor(tier) : "#64748b";
+    const hasCapsules = app.capsules && app.capsules.length > 0;
     return (
       <div key={app.id} style={applicationCard}>
         <div style={appTopRow}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 style={applicantName}>{app.applicant_name}</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <h3 style={applicantName}>{app.applicant_name}</h3>
+              {tier && (
+                <span style={{
+                  background: tierColor + "20",
+                  color: tierColor,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  borderRadius: 20,
+                  lineHeight: 1.3,
+                }}>
+                  {tier}
+                </span>
+              )}
+            </div>
             <p style={applicantMeta}>
               <span style={jobTagPill}>{app.job_title}</span>
               {" "}{app.applicant_email}
@@ -391,6 +467,18 @@ function CompanyDashboardInner() {
           </div>
           <span style={statusPillForApplication(app.status)}>{app.status || "submitted"}</span>
         </div>
+        {hasCapsules && (
+          <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {app.capsules!.map(cap => (
+              <span key={cap.id} style={pillSmall}>
+                📦 {cap.title}
+                {cap.link_url && (
+                  <a href={normalizeUrl(cap.link_url)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 6, color: "#2563eb", textDecoration: "none" }}>🔗</a>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
           {app.drive_opened_at && <span style={trackerBadge("blue")}>📂 Drive viewed</span>}
           {app.resume_opened_at && <span style={trackerBadge("green")}>📄 Resume viewed</span>}
@@ -417,7 +505,7 @@ function CompanyDashboardInner() {
     );
   }
 
-  // ── Job card ───────────────────────────────────────────────────────
+  // ── Job card ───────────────────────────────────────
   function renderJobCard(job: Job) {
     const expired = isExpired(job.expires_at, job.status);
     const appInfo = appStatsByJob.get(job.id);
@@ -484,7 +572,6 @@ function CompanyDashboardInner() {
           .cd-toolbar { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
           .cd-search  { min-width: 0 !important; width: 100% !important; }
 
-          /* ✅ FIX 3: Tabs always fully visible — 3-column grid on mobile */
           .cd-tabs-wrap { display: flex !important; flex-direction: column !important; gap: 8px !important; width: 100% !important; }
           .cd-tabs {
             display: grid !important;
@@ -505,20 +592,17 @@ function CompanyDashboardInner() {
 
           .cd-overview-grid { grid-template-columns: 1fr !important; }
 
-          /* Job actions: 2×2 grid */
           .cd-job-actions {
             display: grid !important; grid-template-columns: 1fr 1fr !important;
             gap: 8px !important; margin-top: 12px !important;
           }
           .cd-job-actions button { width: 100% !important; text-align: center !important; }
 
-          /* App link buttons: 2-col grid */
           .cd-app-links {
             display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important;
           }
           .cd-app-links button { width: 100% !important; text-align: center !important; }
 
-          /* Status action row: 2-col grid */
           .cd-action-row {
             display: grid !important; grid-template-columns: 1fr 1fr !important;
             gap: 8px !important; margin-top: 12px !important;
@@ -539,7 +623,7 @@ function CompanyDashboardInner() {
 
       <div style={pageShell} className="cd-shell">
 
-        {/* ══════════ HERO ══════════ */}
+        {/* HERO */}
         <div style={heroCard}>
           <div style={heroOverlay} className="cd-hero-overlay">
             <div style={heroTop} className="cd-hero-top">
@@ -571,11 +655,10 @@ function CompanyDashboardInner() {
           </div>
         </div>
 
-        {/* ══════════ TOOLBAR ══════════ */}
+        {/* TOOLBAR */}
         <div style={toolbar} className="cd-toolbar">
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search jobs, applicants, emails, drive links…" style={searchInput} className="cd-search" />
-          {/* ✅ FIX 3: tabs-wrap + tabs now render as 3-col grid on mobile */}
           <div className="cd-tabs-wrap" style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <div style={tabRow} className="cd-tabs">
               <button type="button" onClick={() => { setTab("overview"); setFilterJobId(null); }} style={tab === "overview" ? tabBtnActive : tabBtn}>Overview</button>
@@ -586,7 +669,7 @@ function CompanyDashboardInner() {
           </div>
         </div>
 
-        {/* ══════════ OVERVIEW TAB ══════════ */}
+        {/* OVERVIEW TAB */}
         {tab === "overview" && (
           <div style={overviewGrid} className="cd-overview-grid">
             <section style={mainColumn}>
@@ -636,7 +719,7 @@ function CompanyDashboardInner() {
           </div>
         )}
 
-        {/* ══════════ JOBS TAB ══════════ */}
+        {/* JOBS TAB */}
         {tab === "jobs" && (
           <div style={singleColumn}>
             <div style={card}>
@@ -648,7 +731,7 @@ function CompanyDashboardInner() {
           </div>
         )}
 
-        {/* ══════════ APPLICATIONS TAB ══════════ */}
+        {/* APPLICATIONS TAB */}
         {tab === "applications" && (
           <div style={singleColumn}>
             <div style={card}>
@@ -666,7 +749,7 @@ function CompanyDashboardInner() {
           </div>
         )}
 
-        {/* ══════════ SHARE MODAL ══════════ */}
+        {/* SHARE MODAL */}
         {showShareModal && (
           <div style={modalOverlay} onClick={() => setShowShareModal(false)}>
             <div style={{ ...modalCard, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
@@ -684,7 +767,7 @@ function CompanyDashboardInner() {
           </div>
         )}
 
-        {/* ══════════ CANDIDATE DETAIL MODAL ══════════ */}
+        {/* CANDIDATE DETAIL MODAL */}
         {selectedApplication && (
           <div style={modalOverlay} onClick={() => setSelectedApplication(null)}>
             <div style={modalCard} className="cd-modal-card" onClick={e => e.stopPropagation()}>
@@ -698,16 +781,19 @@ function CompanyDashboardInner() {
               </div>
 
               <div style={modalGrid} className="cd-modal-grid">
-                {/* ✅ FIX 1: LEFT — fully redesigned professional CV card */}
                 <div style={{ display: "grid", gap: 16 }}>
                   {(() => {
                     const profile = getApplicantProfile(selectedApplication);
                     const displayName = profile?.full_name || profile?.name || selectedApplication.applicant_name;
                     const initials = displayName.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
+                    const capsules = selectedApplication.capsules || [];
+                    const tier = profile?.total_points !== undefined ? getTierFromPoints(profile.total_points) : null;
+                    // ✅ FIX: fallback color
+                    const tierColor = tier ? getTierColor(tier) : "#64748b";
                     return (
                       <div style={cvCard}>
 
-                        {/* ── Banner + Avatar ── */}
+                        {/* Banner + Avatar */}
                         <div style={cvBanner}>
                           <div style={cvAvatarRing}>
                             {profile?.avatar_url
@@ -716,10 +802,24 @@ function CompanyDashboardInner() {
                           </div>
                         </div>
 
-                        {/* ── Identity block ── */}
+                        {/* Identity block */}
                         <div style={cvIdentity} className="cd-cv-header">
                           <div style={{ flex: 1 }}>
-                            <h3 style={cvName}>{displayName}</h3>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <h3 style={cvName}>{displayName}</h3>
+                              {tier && (
+                                <span style={{
+                                  background: tierColor + "20",
+                                  color: tierColor,
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  padding: "2px 8px",
+                                  borderRadius: 20,
+                                }}>
+                                  {tier}
+                                </span>
+                              )}
+                            </div>
                             {profile?.headline && <p style={cvHeadline}>{profile.headline}</p>}
                             {profile?.profession && (
                               <span style={cvProfessionBadge}>{profile.profession}</span>
@@ -731,13 +831,30 @@ function CompanyDashboardInner() {
                               <span style={cvInfoChip}>✉️ {selectedApplication.applicant_email}</span>
                             </div>
                           </div>
-                          {/* Status badge on the right */}
                           <span style={{ ...statusPillForApplication(selectedApplication.status), alignSelf: "flex-start", flexShrink: 0 }}>
                             {selectedApplication.status || "submitted"}
                           </span>
                         </div>
 
-                        {/* ── Languages ── */}
+                        {/* SkillCapsules attached */}
+                        {capsules.length > 0 && (
+                          <div style={cvSectionBlock}>
+                            <p style={cvSectionLabel}>📦 SkillCapsules attached</p>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                              {capsules.map(cap => (
+                                <div key={cap.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <span>▪️</span>
+                                  <strong>{cap.title}</strong>
+                                  {cap.link_url && (
+                                    <a href={normalizeUrl(cap.link_url)} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb", textDecoration: "none", fontSize: 12 }}>🔗 View</a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Languages */}
                         {profile?.languages && profile.languages.length > 0 && (
                           <div style={cvSectionBlock}>
                             <p style={cvSectionLabel}>🌐 Languages</p>
@@ -747,7 +864,7 @@ function CompanyDashboardInner() {
                           </div>
                         )}
 
-                        {/* ── Application timeline ── */}
+                        {/* Application timeline */}
                         <div style={cvSectionBlock}>
                           <p style={cvSectionLabel}>📋 Application Details</p>
                           <div style={cvTimelineGrid}>
@@ -760,7 +877,7 @@ function CompanyDashboardInner() {
                           </div>
                         </div>
 
-                        {/* ── Note ── */}
+                        {/* Note */}
                         {selectedApplication.note && (
                           <div style={cvNoteBox}>
                             <p style={cvSectionLabel}>💬 Candidate Note</p>
@@ -768,7 +885,7 @@ function CompanyDashboardInner() {
                           </div>
                         )}
 
-                        {/* ── Action buttons ── */}
+                        {/* Action buttons */}
                         <div style={cvActionsRow}>
                           <button type="button" style={driveBtn} onClick={() => handleOpenDrive(selectedApplication)}>📂 Open Drive</button>
                           <button type="button" style={copyLinkBtn} onClick={() => copyToClipboard(selectedApplication.drive_link, "Copied!", "Nothing to copy")}>📋 Copy</button>
@@ -800,6 +917,9 @@ function CompanyDashboardInner() {
                     {(() => {
                       const profile = getApplicantProfile(selectedApplication);
                       if (profile?.username) {
+                        const tier = profile.total_points !== undefined ? getTierFromPoints(profile.total_points) : null;
+                        // ✅ FIX: fallback color
+                        const tierColor = tier ? getTierColor(tier) : "#64748b";
                         return (
                           <div style={cvProfileBox}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -810,6 +930,19 @@ function CompanyDashboardInner() {
                                 <p style={{ margin: 0, fontWeight: 900, color: "#0f172a", fontSize: 15 }}>{profile.full_name || profile.name}</p>
                                 <p style={{ margin: 0, color: "#2563eb", fontSize: 13, fontWeight: 700 }}>@{profile.username}</p>
                               </div>
+                              {tier && (
+                                <span style={{
+                                  background: tierColor + "20",
+                                  color: tierColor,
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  padding: "2px 8px",
+                                  borderRadius: 20,
+                                  marginLeft: 4,
+                                }}>
+                                  {tier}
+                                </span>
+                              )}
                             </div>
                             {profile.headline && <p style={{ margin: "0 0 4px", color: "#475569", fontSize: 14 }}>{profile.headline}</p>}
                             {profile.profession && <p style={{ margin: "0 0 10px", color: "#0f172a", fontSize: 13, fontWeight: 700 }}>{profile.profession}</p>}
@@ -842,7 +975,7 @@ function CompanyDashboardInner() {
   );
 }
 
-// ─── Helper components ────────────────────────────────────────────────────────
+// ─── Helper components ────────────────────────────────────────
 function CVRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
@@ -905,7 +1038,19 @@ function trackerBadge(color: "blue" | "green" | "purple"): CSSProperties {
   return { ...map[color], padding: "3px 8px", borderRadius: 999, fontSize: 11, fontWeight: 700 };
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────
+const pillSmall: CSSProperties = {
+  background: "#f1f5f9",
+  padding: "4px 8px",
+  borderRadius: 16,
+  fontSize: 12,
+  fontWeight: 600,
+  color: "#334155",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+};
+
 const pageShell: CSSProperties = { maxWidth: 1380, margin: "0 auto", padding: 20, fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial", overflowX: "hidden", width: "100%" };
 const loadingCard: CSSProperties = { background: "white", borderRadius: 24, padding: 48, textAlign: "center", boxShadow: "0 10px 30px rgba(2,6,23,0.06)" };
 const heroCard: CSSProperties = { borderRadius: 28, overflow: "hidden", boxShadow: "0 20px 50px rgba(2,6,23,0.18)", marginBottom: 18, background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)" };
@@ -1000,24 +1145,19 @@ const infoRow: CSSProperties = { display: "flex", justifyContent: "space-between
 const infoLabel: CSSProperties = { color: "#475569", fontWeight: 700, fontSize: 14 };
 const infoValue: CSSProperties = { color: "#0f172a", fontWeight: 600, textAlign: "right", fontSize: 14 };
 
-// ✅ FIX 1: Fully redesigned professional CV card styles
+// CV card styles
 const cvCard: CSSProperties = { background: "white", borderRadius: 22, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 8px 24px rgba(2,6,23,0.08)" };
-// Banner with gradient at top of CV
 const cvBanner: CSSProperties = { height: 72, background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%)", position: "relative", display: "flex", alignItems: "flex-end", padding: "0 20px" };
-// Avatar ring overlapping the banner bottom
 const cvAvatarRing: CSSProperties = { width: 80, height: 80, borderRadius: "50%", border: "4px solid white", background: "linear-gradient(135deg, #1d4ed8, #2563eb)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "absolute", bottom: -32, left: 20, boxShadow: "0 8px 20px rgba(37,99,235,0.3)", flexShrink: 0 };
-// Identity block below banner (leaves space for avatar)
 const cvIdentity: CSSProperties = { display: "flex", gap: 16, alignItems: "flex-start", padding: "44px 20px 16px", borderBottom: "1px solid #f1f5f9" };
 const cvName: CSSProperties = { margin: 0, fontSize: 22, fontWeight: 900, color: "#0f172a", letterSpacing: "-0.025em", lineHeight: 1.2 };
 const cvHeadline: CSSProperties = { margin: "5px 0 0", color: "#2563eb", fontSize: 14, fontWeight: 700, lineHeight: 1.4 };
 const cvProfessionBadge: CSSProperties = { display: "inline-block", marginTop: 6, background: "#eef2ff", color: "#3730a3", border: "1px solid #c7d2fe", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 };
 const cvInfoChip: CSSProperties = { background: "#f8fafc", border: "1px solid #e2e8f0", color: "#475569", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 };
-// Section blocks inside CV (with padding)
 const cvSectionBlock: CSSProperties = { padding: "14px 20px", borderBottom: "1px solid #f1f5f9" };
 const cvSectionLabel: CSSProperties = { margin: "0 0 10px", fontSize: 10, fontWeight: 900, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.12em" };
 const cvTimelineGrid: CSSProperties = { display: "grid", gap: 0 };
 const cvNoteBox: CSSProperties = { margin: "0", padding: "14px 20px", background: "#fefce8", borderBottom: "1px solid #fde68a" };
-// Action buttons at bottom of CV
 const cvActionsRow: CSSProperties = { display: "flex", flexWrap: "wrap", gap: 8, padding: "14px 20px" };
 const langPill: CSSProperties = { background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 };
 const cvProfileBox: CSSProperties = { padding: 14, background: "#f8fafc", borderRadius: 14, border: "1px solid #e2e8f0" };
