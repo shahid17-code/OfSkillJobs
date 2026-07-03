@@ -35,7 +35,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${post.title} | OfSkillJob Blog`,
     description: post.description,
-    alternates: { canonical: `https://ofskilljobs.vercel.app/blog/${post.slug}` },
+    alternates: {
+      canonical: `https://ofskilljobs.vercel.app/blog/${post.slug}`,
+      languages: {
+        'en-in': `/blog/${post.slug}`,
+      },
+    },
     openGraph: {
       title: post.title,
       description: post.description,
