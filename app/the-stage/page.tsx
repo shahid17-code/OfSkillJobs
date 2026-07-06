@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -39,9 +40,6 @@ type SortKey = "trending" | "latest" | "impact";
 
 const PAGE_SIZE = 12;
 
-// Signal weights feed the CraftRank algorithm below. Signals that correlate
-// with hiring intent (hireable, smart_solution) count for more than softer
-// peer recognition (creative, well_structured).
 const SIGNALS = [
   { key: "skilled",        label: "Skilled",        icon: "⚡", weight: 1.0 },
   { key: "practical",      label: "Practical",       icon: "🔧", weight: 1.0 },
@@ -72,20 +70,6 @@ const DIFF_STYLE: Record<string, { color: string; bg: string }> = {
 function catOf(c: string)  { return CAT_META[c?.toLowerCase()]  || { icon: "⚡", color: "#64748b", bg: "#f1f5f9" }; }
 function diffOf(d: string) { return DIFF_STYLE[d?.toLowerCase()] || { color: "#334155", bg: "#f1f5f9" }; }
 
-/* ════════════════════════════════════════════════════════════════
-   CRAFTRANK FEED ALGORITHM
-   ────────────────────────────────────────────────────────────────
-   score = weightedSignals + (spotlights x 8) + (impact x 0.5)
-   trendingScore = (score / (ageHours + 2)^decayExponent) + discoveryBoost
-
-   discoveryBoost: capsules under 24h old get a flat bonus that fades
-   linearly to 0 by hour 24 — every capsule is guaranteed early
-   impressions regardless of its starting signal count. Whether it
-   sustains visibility after that depends on real engagement velocity
-   during the boosted window: capsules earning signals/spotlights early
-   get a softer decay exponent and stick around longer than ones that
-   got the same boost but no real engagement.
-   ════════════════════════════════════════════════════════════════ */
 function weightedSignalScore(c: Capsule): number {
   return Object.entries(c.signal_counts || {}).reduce(
     (sum, [key, count]) => sum + count * (SIGNAL_WEIGHT[key] ?? 1),
@@ -98,7 +82,7 @@ function rawEngagementScore(c: Capsule): number {
 }
 
 const DISCOVERY_WINDOW_HOURS = 24;
-const DISCOVERY_BOOST = 14; // flat score bonus, fades linearly over the window
+const DISCOVERY_BOOST = 14;
 
 function trendingScore(c: Capsule): number {
   const ageHours = Math.max(0.1, (Date.now() - new Date(c.created_at).getTime()) / 3_600_000);
@@ -124,7 +108,7 @@ function timeAgo(date: string): string {
   return new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
-export default function TheStage() {
+function TheStageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [highlightedCapsuleId, setHighlightedCapsuleId] = useState<string | null>(null);
@@ -176,8 +160,6 @@ export default function TheStage() {
     })();
   }, []);
 
-  // "Feed energy" — a believable live-activity number, just enough to make
-  // the feed feel alive without faking specific events. Ticks gently.
   useEffect(() => {
     setLiveCount(Math.max(3, Math.floor(capsules.length * 0.4) + Math.floor(Math.random() * 6)));
     const t = setInterval(() => {
@@ -216,8 +198,7 @@ export default function TheStage() {
 
   useEffect(() => { fetchCapsules(true); }, [filterCategory, sortBy]);
 
-  // Deep-link from a notification: ?highlight=<capsuleId> scrolls to and
-  // glows the matching card once the feed has finished loading.
+  // Deep-link from notification
   useEffect(() => {
     const target = searchParams.get("highlight");
     if (!target || loading || capsules.length === 0) return;
@@ -233,11 +214,9 @@ export default function TheStage() {
     }
     const t = setTimeout(() => setHighlightedCapsuleId(null), 2600);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, loading, capsules.length]);
 
-  // Impression tracking — IntersectionObserver logs a view the first time a
-  // card scrolls into view, feeding real denominator data into CraftRank.
+  // Impression tracking
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
       (entries) => {
@@ -259,7 +238,7 @@ export default function TheStage() {
     await supabase.from("capsule_views").insert({
       capsule_id: capsuleId,
       viewer_id: user?.id || null,
-    }); // unique constraint silently no-ops duplicate same-day views; errors ignored intentionally
+    });
   }
 
   const cardRefCallback = useCallback((id: string) => (el: HTMLDivElement | null) => {
@@ -280,9 +259,7 @@ export default function TheStage() {
     return [{ display: "All", normalised: "" }, ...Array.from(map.entries()).map(([norm, display]) => ({ display, normalised: norm }))];
   }, [capsules]);
 
-  // SIGNAL — true toggle. Click sends it; clicking the same signal again
-  // removes it, exactly like liking/unliking a post. Optimistic UI updates
-  // immediately, then reconciles with the DB result.
+  // ── SIGNAL ──────────────────────────────────────────────────────────
   async function handleSignal(capsuleId: string, signalType: string) {
     const busyKey = capsuleId + signalType;
     if (actionInProgress) return;
@@ -330,22 +307,16 @@ export default function TheStage() {
       if (current) {
         const counts = { ...(current.signal_counts || {}) };
         counts[signalType] = Math.max(0, (counts[signalType] || 0) + (alreadySent ? -1 : 1));
-
-        // Recalculate skill_impact_score from the weighted signal formula so
-        // CraftRank updates in real-time as signals are added or removed.
         const newImpactScore = Math.round(
           Object.entries(counts).reduce(
             (sum, [key, count]) => sum + (count as number) * (SIGNAL_WEIGHT[key] ?? 1),
             0
           ) + (current.recruiter_spots || 0) * 8
         );
-
         await supabase
           .from("skill_capsules")
           .update({ signal_counts: counts, skill_impact_score: newImpactScore })
           .eq("id", capsuleId);
-
-        // Sync new score into local state so the card re-renders immediately
         setCapsules(prev => prev.map(c =>
           c.id !== capsuleId ? c : { ...c, signal_counts: counts, skill_impact_score: newImpactScore }
         ));
@@ -371,9 +342,7 @@ export default function TheStage() {
     }
   }
 
-  // SPOTLIGHT — every column reference is explicit and single-table, so this
-  // insert cannot itself raise an ambiguous-column error. If you still see it,
-  // it's coming from a DB-side trigger/view — see the-stage-feed-upgrade.sql.
+  // ── SPOTLIGHT ──────────────────────────────────────────────────────
   async function handleSpotlight(capsuleId: string, candidateId: string) {
     if (actionInProgress) return;
     setActionInProgress(capsuleId + "spot");
@@ -414,8 +383,6 @@ export default function TheStage() {
         console.error("Spotlight error:", error);
         if (error.code === "23505") {
           showToast("You already Spotlighted this candidate.", "info");
-        } else if (error.message?.toLowerCase().includes("ambiguous")) {
-          showToast("Spotlight failed: a database trigger has a column conflict. See the-stage-feed-upgrade.sql.", "error", 6000);
         } else {
           showToast(`Failed: ${error.message || "Try again"}`, "error");
         }
@@ -434,7 +401,6 @@ export default function TheStage() {
       setCapsules(prev => prev.map(c => {
         if (c.id !== capsuleId) return c;
         const spots = (c.recruiter_spots || 0) + 1;
-        // Recalculate skill_impact_score — recruiter_spots contributes x8 to the score
         const newImpactScore = Math.round(
           Object.entries(c.signal_counts || {}).reduce(
             (sum, [key, count]) => sum + (count as number) * (SIGNAL_WEIGHT[key] ?? 1),
@@ -450,14 +416,13 @@ export default function TheStage() {
       showToast("🔦 Candidate Spotlighted! They've been notified.", "success");
     } catch (err: any) {
       console.error(err);
-      showToast(err?.message?.toLowerCase().includes("ambiguous")
-        ? "Spotlight failed: ambiguous column in a DB trigger/view — see the-stage-feed-upgrade.sql diagnostics."
-        : "Unexpected error", "error", 6000);
+      showToast("Unexpected error", "error");
     } finally {
       setActionInProgress(null);
     }
   }
 
+  // ── CALL ──────────────────────────────────────────────────────────
   async function handleCall(capsuleId: string, candidateId: string) {
     if (actionInProgress) return;
     setActionInProgress(capsuleId + "call");
@@ -523,6 +488,7 @@ export default function TheStage() {
 
   const totalSignals = (c: Capsule) => Object.values(c.signal_counts || {}).reduce((a: number, b: number) => a + b, 0);
 
+  // ── JSX ────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -692,7 +658,6 @@ export default function TheStage() {
                   ref={cardRefCallback(capsule.id)}
                   className="sf-card sf-anim"
                   style={{ background:"white", borderRadius:20, padding:"20px 18px", boxShadow:"0 6px 22px rgba(2,6,23,.06)", border: highlightedCapsuleId === capsule.id ? "1.5px solid #6366f1" : "1px solid #f1f5f9", display:"flex", flexDirection:"column", animationDelay:`${Math.min(idx*35,280)}ms`, animation: highlightedCapsuleId === capsule.id ? "nf-glow 1.3s ease 2" : undefined, position:"relative" }}>
-
                   {isNew && (
                     <span style={{ position:"absolute", top:14, right:14, background:"#fef3c7", color:"#92400e", fontSize:10, fontWeight:800, padding:"3px 9px", borderRadius:999, letterSpacing:"0.04em" }}>
                       ✨ NEW
@@ -819,5 +784,19 @@ export default function TheStage() {
         )}
       </div>
     </>
+  );
+}
+
+// ── Wrap in Suspense to satisfy Next.js static rendering ──────────
+export default function TheStage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"60vh", fontFamily:"Inter,system-ui,sans-serif" }}>
+        <div style={{ width:40, height:40, borderRadius:"50%", border:"4px solid #dbe3ee", borderTopColor:"#2563eb", animation:"spin 0.8s linear infinite", marginBottom:16 }} />
+        <p style={{ color:"#64748b", fontWeight:700, margin:0 }}>Loading The Showfloor…</p>
+      </div>
+    }>
+      <TheStageContent />
+    </Suspense>
   );
 }
