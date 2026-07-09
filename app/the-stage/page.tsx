@@ -555,7 +555,7 @@ function TheStageContent() {
           <div style={{ background:"white", borderRadius:24, padding:"56px 24px", textAlign:"center", border:"1px dashed #dbe3ee", marginTop:8 }}>
             <div style={{ fontSize:48, marginBottom:14 }}>🎪</div>
             <h3 style={{ margin:"0 0 8px", fontSize:20, fontWeight:900, color:"#0f172a" }}>The Showfloor is empty</h3>
-            <p style={{ margin:"0 0 22px", color:#64748b", fontSize:15, lineHeight:1.7 }}>No SkillCapsules yet. Be the first to show your skills.</p>
+            <p style={{ margin:"0 0 22px", color:"#64748b", fontSize:15, lineHeight:1.7 }}>No SkillCapsules yet. Be the first to show your skills.</p>
             <Link href="/launch-skillcapsule" style={{ background:"linear-gradient(135deg,#2563eb,#1d4ed8)", color:"white", padding:"13px 28px", borderRadius:14, textDecoration:"none", fontWeight:800, fontSize:15, boxShadow:"0 8px 20px rgba(37,99,235,.3)" }}>
               ✨ Launch First Capsule →
             </Link>
